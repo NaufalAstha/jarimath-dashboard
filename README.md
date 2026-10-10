@@ -2,11 +2,12 @@
 
 Dashboard admin sederhana dengan HTML, CSS, JavaScript vanilla, dan Supabase Auth. Login hanya tersedia untuk akun admin yang sudah dibuat di Supabase; tidak ada halaman pendaftaran.
 
-Halaman login (`index.html` dan `js/login.js`) dipisahkan dari dashboard (`dashboard.html` dan `js/app.js`). Keduanya memakai helper klien bersama `js/supabase-client.js`.
+Halaman login (`index.html`) dan setiap bagian dashboard memiliki file HTML tersendiri: `dashboard.html`, `siswa.html`, `mentor.html`, dan `keuangan.html`. Perilaku data dashboard dikelola bersama oleh `js/app.js`; semua halaman memakai helper klien `js/supabase-client.js`.
 
 ## Fitur dashboard
 
 - Navigasi Dashboard, Data Siswa, Data Mentor, dan Laporan Keuangan.
+- Setiap bagian dashboard dapat dibuka langsung melalui file HTML masing-masing.
 - Data siswa dan mentor dapat ditambah, diubah, dihapus, dan dicari.
 - Transaksi pemasukan/pengeluaran dapat dikelola; ringkasan saldo dihitung otomatis dan laporan dapat diunduh sebagai CSV.
 - Tombol **Masuk ke mode demo** dapat digunakan tanpa konfigurasi Supabase. Mode ini memakai data contoh dan menyimpan perubahan di penyimpanan lokal browser; data demo tidak dikirim ke Supabase.
@@ -18,6 +19,9 @@ Halaman login (`index.html` dan `js/login.js`) dipisahkan dari dashboard (`dashb
 .
 ├── index.html
 ├── dashboard.html
+├── siswa.html
+├── mentor.html
+├── keuangan.html
 ├── css/
 │   └── style.css
 ├── js/

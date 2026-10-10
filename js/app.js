@@ -31,7 +31,7 @@
   };
   let storageWarning = false;
   let data = loadData();
-  let currentView = 'dashboard';
+  let currentView = document.body.dataset.page;
   let editing = null;
 
   const currentYear = document.querySelector('[data-current-year]');
@@ -90,42 +90,21 @@
     renderView();
   }
 
-  function setView(view) {
-    if (!['dashboard', 'siswa', 'mentor', 'keuangan'].includes(view)) return;
-    currentView = view;
-    document.querySelectorAll('[data-view]').forEach(function (link) {
-      const active = link.dataset.view === view;
-      link.classList.toggle('nav-item-active', active);
-      if (active) link.setAttribute('aria-current', 'page');
-      else link.removeAttribute('aria-current');
-    });
-    renderView();
-  }
-
-  function metricCard(label, value, note, icon) {
-    return '<article class="summary-card"><div class="card-topline"><span>' + label
-      + '</span><span class="metric-icon" aria-hidden="true">' + icon + '</span></div><p class="metric-value">'
-      + value + '</p><p class="metric-note">' + note + '</p></article>';
-  }
-
   function renderDashboard() {
     const income = data.keuangan.filter(function (item) { return item.jenis === 'Pemasukan'; })
       .reduce(function (sum, item) { return sum + Number(item.jumlah); }, 0);
     const expense = data.keuangan.filter(function (item) { return item.jenis === 'Pengeluaran'; })
       .reduce(function (sum, item) { return sum + Number(item.jumlah); }, 0);
-    viewContainer.innerHTML = '<section class="summary-grid" aria-label="Ringkasan data">'
-      + metricCard('Total siswa', data.siswa.length, 'Data siswa terdaftar', '♧')
-      + metricCard('Mentor aktif', data.mentor.filter(function (item) { return item.status === 'Aktif'; }).length, 'Siap mendampingi siswa', '♙')
-      + metricCard('Saldo tercatat', escapeHTML(formatCurrency(income - expense)), 'Dari transaksi demo', '↗')
-      + '</section><section class="content-card"><div class="section-heading"><div><h2>Aktivitas terbaru</h2>'
-      + '<p class="muted">Transaksi terakhir yang tercatat pada data demo.</p></div>'
-      + '<button class="button button-outline" type="button" data-action="navigate" data-target="keuangan">Buka laporan</button></div>'
-      + '<div class="table-wrap"><table><thead><tr><th>Transaksi</th><th>Tanggal</th><th>Jenis</th><th>Jumlah</th></tr></thead><tbody>'
-      + data.keuangan.slice().reverse().slice(0, 5).map(function (item) {
+    document.getElementById('student-count').textContent = data.siswa.length;
+    document.getElementById('mentor-count').textContent = data.mentor.filter(function (item) {
+      return item.status === 'Aktif';
+    }).length;
+    document.getElementById('recorded-balance').textContent = formatCurrency(income - expense);
+    document.getElementById('activity-table-body').innerHTML = data.keuangan.slice().reverse().slice(0, 5)
+      .map(function (item) {
         return '<tr><td>' + escapeHTML(item.deskripsi) + '</td><td>' + escapeHTML(item.tanggal) + '</td><td>'
           + escapeHTML(item.jenis) + '</td><td>' + escapeHTML(formatCurrency(item.jumlah)) + '</td></tr>';
-      }).join('')
-      + '</tbody></table></div></section>';
+      }).join('');
   }
 
   function renderDataTable(collection) {
@@ -159,47 +138,20 @@
 
   function renderCollection(collection) {
     const isFinance = collection === 'keuangan';
-    const title = collection === 'siswa' ? 'Data siswa' : collection === 'mentor' ? 'Data mentor' : 'Laporan keuangan';
-    const description = collection === 'siswa'
-      ? 'Kelola daftar siswa dan status kelasnya.'
-      : collection === 'mentor'
-        ? 'Kelola mentor dan bidang pendampingannya.'
-        : 'Catat pemasukan dan pengeluaran. Unduh laporan kapan saja.';
-    document.getElementById('view-title').textContent = title;
-    document.getElementById('view-eyebrow').textContent = isFinance ? 'KEUANGAN' : 'DATA MASTER';
-    document.getElementById('view-description').textContent = description;
-    const actions = '<label class="search-box"><span class="visually-hidden">Cari data</span><input id="table-search" type="search" placeholder="Cari data..." autocomplete="off"></label>'
-      + (isFinance
-        ? '<button class="button button-outline" type="button" data-action="export">Unduh CSV</button>'
-        : '')
-      + '<button class="button button-primary" type="button" data-action="add">'
-      + (isFinance ? '+ Catat transaksi' : collection === 'siswa' ? '+ Tambah siswa' : '+ Tambah mentor') + '</button>';
-    let financeSummary = '';
     if (isFinance) {
       const income = data.keuangan.filter(function (item) { return item.jenis === 'Pemasukan'; })
         .reduce(function (sum, item) { return sum + Number(item.jumlah); }, 0);
       const expense = data.keuangan.filter(function (item) { return item.jenis === 'Pengeluaran'; })
         .reduce(function (sum, item) { return sum + Number(item.jumlah); }, 0);
-      financeSummary = '<section class="summary-grid finance-summary" aria-label="Ringkasan keuangan">'
-        + metricCard('Pemasukan', escapeHTML(formatCurrency(income)), 'Total transaksi masuk', '↗')
-        + metricCard('Pengeluaran', escapeHTML(formatCurrency(expense)), 'Total transaksi keluar', '↘')
-        + metricCard('Saldo', escapeHTML(formatCurrency(income - expense)), 'Pemasukan dikurangi pengeluaran', '=') + '</section>';
+      document.getElementById('finance-income').textContent = formatCurrency(income);
+      document.getElementById('finance-expense').textContent = formatCurrency(expense);
+      document.getElementById('finance-balance').textContent = formatCurrency(income - expense);
     }
-    viewContainer.innerHTML = financeSummary + '<section class="content-card"><div class="section-heading table-heading"><div><h2>'
-      + title + '</h2><p class="muted" id="result-count"></p></div><div class="table-toolbar">' + actions
-      + '</div></div><div class="table-wrap"><table id="data-table"><thead><tr>'
-      + (collection === 'siswa' ? '<th>Nama</th><th>Kelas</th><th>Status</th>'
-        : collection === 'mentor' ? '<th>Nama</th><th>Keahlian</th><th>Status</th>'
-          : '<th>Transaksi</th><th>Jenis</th><th>Tanggal</th><th>Jumlah</th>')
-      + '<th>Aksi</th></tr></thead><tbody></tbody></table></div></section>';
     renderDataTable(collection);
   }
 
   function renderView() {
     if (currentView === 'dashboard') {
-      document.getElementById('view-title').textContent = 'Dashboard';
-      document.getElementById('view-eyebrow').textContent = 'OVERVIEW';
-      document.getElementById('view-description').textContent = 'Ringkasan pengelolaan Jarimath Kids.';
       renderDashboard();
     } else {
       renderCollection(currentView);
@@ -266,13 +218,6 @@
     window.setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
 
-  document.querySelectorAll('[data-view]').forEach(function (link) {
-    link.addEventListener('click', function (event) {
-      event.preventDefault();
-      setView(link.dataset.view);
-    });
-  });
-
   viewContainer.addEventListener('input', function (event) {
     if (event.target.id === 'table-search') renderDataTable(currentView);
   });
@@ -281,10 +226,6 @@
     const button = event.target.closest('[data-action]');
     if (!button) return;
     const action = button.dataset.action;
-    if (action === 'navigate') {
-      setView(button.dataset.target);
-      return;
-    }
     if (action === 'add') {
       openForm(currentView);
       return;
@@ -301,7 +242,6 @@
       data[currentView] = data[currentView].filter(function (record) { return record.id !== item.id; });
       saveData(currentView);
       renderView();
-      if (currentView === 'dashboard') renderDashboard();
     }
   });
 

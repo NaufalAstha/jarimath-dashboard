@@ -280,6 +280,7 @@ tbody tr:last-child td { border-bottom: 0; }
 .dashboard-shell .dashboard-content .muted { font-size: 16px; }
 .dashboard-shell .welcome-row h1 { font-size: 30px; }
 .dashboard-shell .date-chip { padding: 10px 14px; font-size: 15px; }
+.dashboard-shell a.button { text-decoration: none; }
 .dashboard-shell .summary-card { padding: 20px; }
 .dashboard-shell .card-topline { font-size: 15px; }
 .dashboard-shell .metric-icon { width: 34px; height: 34px; }
