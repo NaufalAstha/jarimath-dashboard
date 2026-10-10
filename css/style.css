@@ -266,3 +266,47 @@ tbody tr:last-child td { border-bottom: 0; }
   .table-toolbar .button { padding: 0 8px; font-size: 11px; }
   th, td { padding: 12px 14px; }
 }
+
+.dashboard-shell .eyebrow,
+.dashboard-shell .topbar-label { font-size: 12px; }
+.dashboard-shell .nav-label { font-size: 11px; }
+.dashboard-shell .sidebar-caption { font-size: 10px; }
+.dashboard-shell .nav-item { min-height: 46px; font-size: 15px; }
+.dashboard-shell .help-card p { font-size: 14px; }
+.dashboard-shell .topbar-brand { font-size: 17px; }
+.dashboard-shell .account-name { font-size: 15px; }
+.dashboard-shell .account-email { font-size: 14px; }
+.dashboard-shell .button { font-size: 15px; }
+.dashboard-shell .dashboard-content .muted { font-size: 16px; }
+.dashboard-shell .welcome-row h1 { font-size: 30px; }
+.dashboard-shell .date-chip { padding: 10px 14px; font-size: 15px; }
+.dashboard-shell .summary-card { padding: 20px; }
+.dashboard-shell .card-topline { font-size: 15px; }
+.dashboard-shell .metric-icon { width: 34px; height: 34px; }
+.dashboard-shell .metric-value { font-size: 29px; }
+.dashboard-shell .metric-note { font-size: 14px; }
+.dashboard-shell .section-heading { padding: 23px 24px; }
+.dashboard-shell .section-heading h2 { font-size: 19px; }
+.dashboard-shell .section-heading .muted { font-size: 15px; }
+.dashboard-shell .empty-state h3 { font-size: 16px; }
+.dashboard-shell .empty-state p,
+.dashboard-shell .dashboard-message { font-size: 15px; }
+.dashboard-shell .search-box input { font-size: 16px; }
+.dashboard-shell th,
+.dashboard-shell td { padding: 16px 22px; font-size: 16px; }
+.dashboard-shell th { padding: 15px 22px; font-size: 14px; }
+.dashboard-shell .text-button { font-size: 15px; }
+.dashboard-shell .status-pill { padding: 5px 9px; font-size: 14px; }
+.data-dialog .dialog-heading h2 { font-size: 22px; }
+.data-dialog .dialog-label,
+.data-dialog input,
+.data-dialog select { font-size: 16px; }
+.data-dialog .button { font-size: 15px; }
+
+@media (max-width: 620px) {
+  .dashboard-shell .nav-item { min-height: 40px; }
+  .dashboard-shell .summary-card { padding: 16px; }
+  .dashboard-shell .section-heading { padding: 18px 16px; }
+  .dashboard-shell th,
+  .dashboard-shell td { padding: 13px 16px; }
+}
