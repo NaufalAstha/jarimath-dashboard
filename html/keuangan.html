@@ -4,12 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f5f5f3">
-  <meta name="description" content="Kelola data siswa Jarimath Kids">
-  <title>Data Siswa — Jarimath Kids</title>
-  <link rel="icon" href="favicon.ico" type="image/x-icon">
-  <link rel="stylesheet" href="css/style.css">
+  <meta name="description" content="Laporan keuangan Jarimath Kids">
+  <title>Laporan Keuangan — Jarimath Kids</title>
+  <link rel="icon" href="../favicon.ico" type="image/x-icon">
+  <link rel="stylesheet" href="../css/style.css">
 </head>
-<body data-page="siswa">
+<body data-page="keuangan">
   <div class="dashboard-shell">
     <aside class="sidebar">
       <a class="brand" href="dashboard.html" aria-label="Jarimath Kids">
@@ -19,9 +19,9 @@
       <p class="nav-label">MENU UTAMA</p>
       <nav aria-label="Menu utama">
         <a class="nav-item" href="dashboard.html"><span class="nav-icon" aria-hidden="true">▦</span> Dashboard</a>
-        <a class="nav-item nav-item-active" href="siswa.html" aria-current="page"><span class="nav-icon" aria-hidden="true">♧</span> Data Siswa</a>
+        <a class="nav-item" href="siswa.html"><span class="nav-icon" aria-hidden="true">♧</span> Data Siswa</a>
         <a class="nav-item" href="mentor.html"><span class="nav-icon" aria-hidden="true">♙</span> Data Mentor</a>
-        <a class="nav-item" href="keuangan.html"><span class="nav-icon" aria-hidden="true">▤</span> Laporan Keuangan</a>
+        <a class="nav-item nav-item-active" href="keuangan.html" aria-current="page"><span class="nav-icon" aria-hidden="true">▤</span> Laporan Keuangan</a>
       </nav>
       <div class="sidebar-bottom"></div>
     </aside>
@@ -45,23 +45,41 @@
       <main class="dashboard-content">
         <section class="welcome-row">
           <div>
-            <p class="eyebrow">DATA MASTER</p>
-            <h1>Data siswa</h1>
-            <p class="muted">Kelola daftar siswa dan status kelasnya.</p>
+            <p class="eyebrow">KEUANGAN</p>
+            <h1>Laporan keuangan</h1>
+            <p class="muted">Catat pemasukan dan pengeluaran. Unduh laporan kapan saja.</p>
           </div>
         </section>
         <div id="view-container">
+          <section class="summary-grid finance-summary" aria-label="Ringkasan keuangan">
+            <article class="summary-card">
+              <div class="card-topline"><span>Pemasukan</span><span class="metric-icon" aria-hidden="true">↗</span></div>
+              <p id="finance-income" class="metric-value">Rp0</p>
+              <p class="metric-note">Total transaksi masuk</p>
+            </article>
+            <article class="summary-card">
+              <div class="card-topline"><span>Pengeluaran</span><span class="metric-icon" aria-hidden="true">↘</span></div>
+              <p id="finance-expense" class="metric-value">Rp0</p>
+              <p class="metric-note">Total transaksi keluar</p>
+            </article>
+            <article class="summary-card">
+              <div class="card-topline"><span>Saldo</span><span class="metric-icon" aria-hidden="true">=</span></div>
+              <p id="finance-balance" class="metric-value">Rp0</p>
+              <p class="metric-note">Pemasukan dikurangi pengeluaran</p>
+            </article>
+          </section>
           <section class="content-card">
             <div class="section-heading table-heading">
-              <div><h2>Data siswa</h2><p class="muted" id="result-count"></p></div>
+              <div><h2>Laporan keuangan</h2><p class="muted" id="result-count"></p></div>
               <div class="table-toolbar">
                 <label class="search-box"><span class="visually-hidden">Cari data</span><input id="table-search" type="search" placeholder="Cari data..." autocomplete="off"></label>
-                <button class="button button-primary" type="button" data-action="add">+ Tambah siswa</button>
+                <button class="button button-outline" type="button" data-action="export">Unduh CSV</button>
+                <button class="button button-primary" type="button" data-action="add">+ Catat transaksi</button>
               </div>
             </div>
             <div class="table-wrap">
               <table id="data-table">
-                <thead><tr><th>Nama</th><th>Kelas</th><th>Status</th><th>Aksi</th></tr></thead>
+                <thead><tr><th>Transaksi</th><th>Jenis</th><th>Tanggal</th><th>Jumlah</th><th>Aksi</th></tr></thead>
                 <tbody></tbody>
               </table>
             </div>
@@ -87,8 +105,8 @@
   </dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/config.js"></script>
-  <script src="js/supabase-client.js"></script>
-  <script src="js/app.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/supabase-client.js"></script>
+  <script src="../js/app.js"></script>
 </body>
 </html>

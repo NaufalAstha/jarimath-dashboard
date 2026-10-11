@@ -35,7 +35,7 @@
   }
 
   function redirectToDashboard() {
-    window.location.replace('dashboard.html');
+    window.location.replace('html/dashboard.html');
   }
 
   try {

@@ -105,6 +105,147 @@
         return '<tr><td>' + escapeHTML(item.deskripsi) + '</td><td>' + escapeHTML(item.tanggal) + '</td><td>'
           + escapeHTML(item.jenis) + '</td><td>' + escapeHTML(formatCurrency(item.jumlah)) + '</td></tr>';
       }).join('');
+    renderDashboardChart();
+  }
+
+  function renderDashboardChart() {
+    const selector = document.getElementById('dashboard-chart-metric');
+    const chart = document.getElementById('dashboard-chart');
+    const description = document.getElementById('dashboard-chart-description');
+    const note = document.getElementById('dashboard-chart-note');
+    if (!selector || !chart || !description || !note) return;
+
+    const metric = selector.value;
+    const monthFormatter = new Intl.DateTimeFormat('id-ID', { month: 'short' });
+    const metrics = {
+      murid: {
+        description: 'Jumlah murid yang terdaftar menurut status saat ini.',
+        note: 'Jumlah murid terdaftar saat ini berdasarkan status.',
+        color: '#526779',
+        values: [
+          { label: 'Aktif', value: data.siswa.filter(function (student) { return student.status === 'Aktif'; }).length },
+          { label: 'Menunggu', value: data.siswa.filter(function (student) { return student.status === 'Menunggu'; }).length }
+        ]
+      },
+      revenue: {
+        description: 'Total pemasukan dari transaksi per bulan dalam 6 bulan terakhir.',
+        note: 'Revenue dihitung dari transaksi berjenis pemasukan.',
+        color: '#547b68',
+        values: [],
+        kind: 'currency'
+      },
+      margin: {
+        description: 'Margin profit bulanan dalam 6 bulan terakhir.',
+        note: 'Margin profit = (revenue - cost) / revenue. Bulan tanpa revenue ditampilkan sebagai —.',
+        color: '#7c6a9a',
+        values: [],
+        kind: 'percent'
+      },
+      cost: {
+        description: 'Total pengeluaran dari transaksi per bulan dalam 6 bulan terakhir.',
+        note: 'Cost dihitung dari transaksi berjenis pengeluaran.',
+        color: '#a06c58',
+        values: [],
+        kind: 'currency'
+      }
+    };
+    const selectedMetric = metrics[metric] || metrics.murid;
+    description.textContent = selectedMetric.description;
+    note.textContent = selectedMetric.note;
+
+    if (metric !== 'murid') {
+      const today = new Date();
+      const months = [];
+      for (let offset = 5; offset >= 0; offset -= 1) {
+        const date = new Date(today.getFullYear(), today.getMonth() - offset, 1);
+        const key = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+        months.push({ key: key, label: monthFormatter.format(date) });
+      }
+      const totalsByMonth = {};
+      data.keuangan.forEach(function (transaction) {
+        const key = String(transaction.tanggal || '').slice(0, 7);
+        if (!/^\d{4}-\d{2}$/.test(key)) return;
+        if (!totalsByMonth[key]) totalsByMonth[key] = { revenue: 0, cost: 0 };
+        if (transaction.jenis === 'Pemasukan') {
+          totalsByMonth[key].revenue += Number(transaction.jumlah) || 0;
+        } else if (transaction.jenis === 'Pengeluaran') {
+          totalsByMonth[key].cost += Number(transaction.jumlah) || 0;
+        }
+      });
+      selectedMetric.values = months.map(function (month) {
+        const totals = totalsByMonth[month.key] || { revenue: 0, cost: 0 };
+        let value;
+        if (metric === 'revenue') value = totals.revenue;
+        else if (metric === 'cost') value = totals.cost;
+        else value = totals.revenue ? (totals.revenue - totals.cost) / totals.revenue * 100 : null;
+        return { label: month.label, value: value };
+      });
+    }
+
+    chart.innerHTML = renderBarChart(selectedMetric.values, selectedMetric);
+  }
+
+  function renderBarChart(values, metric) {
+    const width = 760;
+    const height = 300;
+    const left = 78;
+    const right = 20;
+    const top = 24;
+    const bottom = 48;
+    const plotWidth = width - left - right;
+    const plotHeight = height - top - bottom;
+    const finiteValues = values.map(function (item) { return item.value; })
+      .filter(function (value) { return Number.isFinite(value); });
+    let minimum = Math.min(0, ...finiteValues);
+    let maximum = Math.max(0, ...finiteValues);
+    if (minimum === maximum) maximum = minimum + 1;
+    const padding = (maximum - minimum) * 0.08;
+    if (minimum < 0) minimum -= padding;
+    if (maximum > 0) maximum += padding;
+    const zeroY = top + (maximum / (maximum - minimum)) * plotHeight;
+    const stepX = plotWidth / values.length;
+    const barWidth = Math.min(54, stepX * 0.48);
+    const axisLabel = function (value) {
+      if (metric.kind === 'currency') {
+        return 'Rp' + new Intl.NumberFormat('id-ID', {
+          notation: 'compact', maximumFractionDigits: 1
+        }).format(value);
+      }
+      return metric.kind === 'percent' ? Math.round(value) + '%' : Math.round(value).toString();
+    };
+    const valueLabel = function (value) {
+      if (value === null) return '—';
+      if (metric.kind === 'currency') return formatCurrency(value);
+      return metric.kind === 'percent' ? value.toFixed(1) + '%' : String(value);
+    };
+    let svg = '<svg class="dashboard-chart-svg" viewBox="0 0 ' + width + ' ' + height
+      + '" role="img" aria-label="Grafik ' + escapeHTML(metric.description) + '">';
+    for (let index = 0; index <= 4; index += 1) {
+      const value = maximum - (maximum - minimum) * index / 4;
+      const y = top + plotHeight * index / 4;
+      svg += '<line class="chart-gridline" x1="' + left + '" y1="' + y + '" x2="' + (width - right)
+        + '" y2="' + y + '"></line><text class="chart-axis-label" x="' + (left - 10) + '" y="' + (y + 4)
+        + '" text-anchor="end">' + escapeHTML(axisLabel(value)) + '</text>';
+    }
+    svg += '<line class="chart-baseline" x1="' + left + '" y1="' + zeroY + '" x2="' + (width - right)
+      + '" y2="' + zeroY + '"></line>';
+    values.forEach(function (item, index) {
+      const centerX = left + stepX * (index + 0.5);
+      if (Number.isFinite(item.value)) {
+        const valueY = top + ((maximum - item.value) / (maximum - minimum)) * plotHeight;
+        const barY = Math.min(zeroY, valueY);
+        const barHeight = Math.max(1, Math.abs(zeroY - valueY));
+        svg += '<rect class="chart-bar" x="' + (centerX - barWidth / 2) + '" y="' + barY + '" width="'
+          + barWidth + '" height="' + barHeight + '" rx="4" fill="' + metric.color + '"><title>'
+          + escapeHTML(item.label + ': ' + valueLabel(item.value)) + '</title></rect>';
+      } else {
+        svg += '<text class="chart-empty-label" x="' + centerX + '" y="' + (zeroY - 8)
+          + '" text-anchor="middle">—</text>';
+      }
+      svg += '<text class="chart-category-label" x="' + centerX + '" y="' + (height - 17)
+        + '" text-anchor="middle">' + escapeHTML(item.label) + '</text>';
+    });
+    return svg + '</svg>';
   }
 
   function renderDataTable(collection) {
@@ -222,6 +363,10 @@
     if (event.target.id === 'table-search') renderDataTable(currentView);
   });
 
+  viewContainer.addEventListener('change', function (event) {
+    if (event.target.id === 'dashboard-chart-metric') renderDashboardChart();
+  });
+
   viewContainer.addEventListener('click', function (event) {
     const button = event.target.closest('[data-action]');
     if (!button) return;
@@ -282,7 +427,7 @@
     } catch (error) {
       dashboardMessage.textContent = 'Tidak dapat menyimpan status sesi browser: ' + error.message;
     }
-    window.location.replace('index.html');
+    window.location.replace('../index.html');
   }
 
   async function initializeAuth() {
