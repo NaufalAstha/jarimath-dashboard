@@ -46,7 +46,7 @@
           <div>
             <p class="eyebrow">DATA MASTER</p>
             <h1>Data siswa</h1>
-            <p class="muted">Kelola daftar siswa dan status kelasnya.</p>
+            <p class="muted">Kelola siswa, informasi orang tua, program, dan asal sekolah.</p>
           </div>
         </section>
         <div id="view-container">
@@ -55,12 +55,24 @@
               <div><h2>Data siswa</h2><p class="muted" id="result-count"></p></div>
               <div class="table-toolbar">
                 <label class="search-box"><span class="visually-hidden">Cari data</span><input id="table-search" type="search" placeholder="Cari data..." autocomplete="off"></label>
-                <button class="button button-primary" type="button" data-action="add">+ Tambah siswa</button>
+                <button class="button button-primary" type="button" data-action="add" data-collection="siswa">+ Tambah siswa</button>
               </div>
             </div>
             <div class="table-wrap">
               <table id="data-table">
-                <thead><tr><th>Nama</th><th>Kelas</th><th>Status</th><th>Aksi</th></tr></thead>
+                <thead><tr><th>Nama</th><th>Nama orang tua</th><th>Telepon orang tua</th><th>Usia</th><th>Program</th><th>Asal sekolah</th><th>Status</th><th>Aksi</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+          <section class="content-card">
+            <div class="section-heading table-heading">
+              <div><h2>Program dan SPP</h2><p class="muted" id="program-result-count"></p></div>
+              <button class="button button-primary" type="button" data-action="add" data-collection="program">+ Tambah program</button>
+            </div>
+            <div class="table-wrap">
+              <table id="program-table">
+                <thead><tr><th>Program</th><th>SPP per bulan</th><th>Aksi</th></tr></thead>
                 <tbody></tbody>
               </table>
             </div>

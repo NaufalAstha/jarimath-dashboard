@@ -138,8 +138,10 @@ h1, h2, h3 { font-family: 'Manrope', sans-serif; }
   border-radius: 7px; outline: none; color: #303943; background: #fff; font: inherit;
 }
 .chart-select-label select:focus { border-color: #8996a2; box-shadow: 0 0 0 3px rgba(55, 75, 95, .08); }
-.chart-plot { width: 100%; padding: 16px 18px 0; overflow-x: auto; }
-.dashboard-chart-svg { display: block; min-width: 520px; max-width: none; height: auto; overflow: visible; }
+.chart-plot { width: 100%; padding: 16px 18px 0; overflow: hidden; touch-action: pan-y; }
+.dashboard-chart-svg { display: block; width: 100%; min-width: 0; max-width: 100%; height: auto; overflow: hidden; }
+.chart-no-data { min-height: 220px; display: grid; place-items: center; margin: 0; color: #818b95; font-size: 16px; }
+.form-hint { margin: -8px 0 14px; color: #687581; font-size: 12px; }
 .chart-gridline { stroke: #edf0f2; stroke-width: 1; }
 .chart-line { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
 .chart-point { stroke: #fff; stroke-width: 2; }
@@ -188,7 +190,6 @@ h1, h2, h3 { font-family: 'Manrope', sans-serif; }
   .section-heading { align-items: flex-start; gap: 10px; padding: 17px 15px; }
   .section-heading .button { min-height: 32px; padding: 0 9px; font-size: 10px; }
   .chart-plot { padding: 12px 10px 0; }
-  .dashboard-chart-svg { min-width: 470px; }
   .chart-note { padding: 0 16px 16px; }
 }
 @media (prefers-reduced-motion: reduce) {
