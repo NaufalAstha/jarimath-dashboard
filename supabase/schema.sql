@@ -58,22 +58,108 @@ alter table public.siswa alter column kelas drop not null;
 alter table public.mentor add column if not exists telepon text;
 alter table public.mentor alter column keahlian drop not null;
 alter table public.mentor alter column status drop not null;
+alter table public.mentor add column if not exists kapasitas_murid integer not null default 4;
+alter table public.mentor add column if not exists tarif_per_anak numeric(14, 2) not null default 0;
+alter table public.mentor add column if not exists tanggal_bayar smallint;
+alter table public.mentor drop constraint if exists mentor_kapasitas_murid_check;
+alter table public.mentor add constraint mentor_kapasitas_murid_check check (kapasitas_murid > 0);
+alter table public.mentor drop constraint if exists mentor_tarif_per_anak_check;
+alter table public.mentor add constraint mentor_tarif_per_anak_check check (tarif_per_anak >= 0);
+alter table public.mentor drop constraint if exists mentor_tanggal_bayar_check;
+alter table public.mentor add constraint mentor_tanggal_bayar_check check (tanggal_bayar is null or tanggal_bayar between 1 and 31);
 
 insert into public.program (nama, spp)
 values ('Matematika dasar', 350000), ('Berhitung ceria', 350000)
 on conflict (nama) do nothing;
+
+create table if not exists public.penugasan_mentor (
+  id uuid primary key default gen_random_uuid(),
+  tanggal date not null,
+  mentor_id uuid not null references public.mentor(id) on delete restrict,
+  siswa_id uuid not null references public.siswa(id) on delete restrict,
+  created_at timestamptz not null default now(),
+  unique (tanggal, siswa_id)
+);
+
+create index if not exists penugasan_mentor_mentor_tanggal_idx
+  on public.penugasan_mentor (mentor_id, tanggal);
+
+create table if not exists public.pengaturan (
+  id text primary key,
+  tanggal_bayar smallint not null default 5 check (tanggal_bayar between 1 and 31),
+  created_at timestamptz not null default now()
+);
+
+insert into public.pengaturan (id, tanggal_bayar)
+values ('global', 5)
+on conflict (id) do nothing;
+
+create table if not exists public.pembayaran_mentor (
+  id uuid primary key default gen_random_uuid(),
+  mentor_id uuid not null references public.mentor(id) on delete restrict,
+  nama_mentor text not null,
+  periode date not null,
+  jumlah_siswa integer not null check (jumlah_siswa > 0),
+  tarif_per_anak numeric(14, 2) not null check (tarif_per_anak >= 0),
+  jumlah numeric(14, 2) not null check (jumlah > 0),
+  tanggal_bayar date not null,
+  created_at timestamptz not null default now(),
+  unique (mentor_id, periode)
+);
+
+create or replace function public.enforce_mentor_daily_capacity()
+returns trigger
+language plpgsql
+as $$
+declare
+  max_students integer;
+  current_count integer;
+begin
+  select kapasitas_murid into max_students
+  from public.mentor
+  where id = new.mentor_id
+  for update;
+
+  if max_students is null then
+    raise exception 'Mentor tidak ditemukan.';
+  end if;
+
+  select count(*) into current_count
+  from public.penugasan_mentor
+  where mentor_id = new.mentor_id
+    and tanggal = new.tanggal
+    and id is distinct from new.id;
+
+  if current_count >= max_students then
+    raise exception 'Mentor sudah mencapai batas maksimal murid pada tanggal tersebut.';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists penugasan_mentor_capacity_check on public.penugasan_mentor;
+create trigger penugasan_mentor_capacity_check
+  before insert or update of mentor_id, tanggal on public.penugasan_mentor
+  for each row execute function public.enforce_mentor_daily_capacity();
 
 alter table public.siswa enable row level security;
 alter table public.mentor enable row level security;
 alter table public.keuangan enable row level security;
 alter table public.program enable row level security;
 alter table public.biaya_tetap enable row level security;
+alter table public.penugasan_mentor enable row level security;
+alter table public.pembayaran_mentor enable row level security;
+alter table public.pengaturan enable row level security;
 
 grant select, insert, update, delete on public.siswa to authenticated;
 grant select, insert, update, delete on public.mentor to authenticated;
 grant select, insert, update, delete on public.keuangan to authenticated;
 grant select, insert, update, delete on public.program to authenticated;
 grant select, insert, update, delete on public.biaya_tetap to authenticated;
+grant select, insert, update, delete on public.penugasan_mentor to authenticated;
+grant select, insert, update, delete on public.pembayaran_mentor to authenticated;
+grant select, insert, update, delete on public.pengaturan to authenticated;
 
 drop policy if exists "Authenticated users can manage siswa" on public.siswa;
 create policy "Authenticated users can manage siswa"
@@ -98,4 +184,19 @@ create policy "Authenticated users can manage program"
 drop policy if exists "Authenticated users can manage biaya_tetap" on public.biaya_tetap;
 create policy "Authenticated users can manage biaya_tetap"
   on public.biaya_tetap for all to authenticated
+  using (true) with check (true);
+
+drop policy if exists "Authenticated users can manage penugasan_mentor" on public.penugasan_mentor;
+create policy "Authenticated users can manage penugasan_mentor"
+  on public.penugasan_mentor for all to authenticated
+  using (true) with check (true);
+
+drop policy if exists "Authenticated users can manage pembayaran_mentor" on public.pembayaran_mentor;
+create policy "Authenticated users can manage pembayaran_mentor"
+  on public.pembayaran_mentor for all to authenticated
+  using (true) with check (true);
+
+drop policy if exists "Authenticated users can manage pengaturan" on public.pengaturan;
+create policy "Authenticated users can manage pengaturan"
+  on public.pengaturan for all to authenticated
   using (true) with check (true);

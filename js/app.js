@@ -14,7 +14,10 @@
     mentor: 'jarimath-demo-mentor',
     keuangan: 'jarimath-demo-keuangan',
     program: 'jarimath-demo-program',
-    biaya_tetap: 'jarimath-demo-biaya-tetap'
+    biaya_tetap: 'jarimath-demo-biaya-tetap',
+    penugasan_mentor: 'jarimath-demo-penugasan-mentor',
+    pembayaran_mentor: 'jarimath-demo-pembayaran-mentor',
+    pengaturan: 'jarimath-demo-pengaturan'
   };
   const initialData = {
     siswa: [
@@ -23,8 +26,8 @@
       { id: 's-3', nama: 'Nadia Zahra', asal_sekolah: 'SD Harapan', usia: 9, telepon_orang_tua: '081234567891', nama_orang_tua: 'Dewi Zahra', program_id: 'p-1', program: 'Matematika dasar', spp: 350000, status: 'Menunggu' }
     ],
     mentor: [
-      { id: 'm-1', nama: 'Kak Dinda', telepon: '081234567892' },
-      { id: 'm-2', nama: 'Kak Fajar', telepon: '081234567893' }
+      { id: 'm-1', nama: 'Kak Dinda', telepon: '081234567892', kapasitas_murid: 4, tarif_per_anak: 0, tanggal_bayar: null },
+      { id: 'm-2', nama: 'Kak Fajar', telepon: '081234567893', kapasitas_murid: 4, tarif_per_anak: 0, tanggal_bayar: null }
     ],
     keuangan: [
       { id: 'k-1', deskripsi: 'Pembayaran kelas Alya', jenis: 'Pemasukan', jumlah: 350000, tanggal: '2026-10-02' },
@@ -35,13 +38,26 @@
       { id: 'p-1', nama: 'Matematika dasar', spp: 350000 },
       { id: 'p-2', nama: 'Berhitung ceria', spp: 350000 }
     ],
-    biaya_tetap: []
+    biaya_tetap: [],
+    penugasan_mentor: [],
+    pembayaran_mentor: [],
+    pengaturan: [{ id: 'global', tanggal_bayar: 5 }]
   };
   let storageWarning = false;
   let data = loadData();
   let currentView = document.body.dataset.page;
   let editing = null;
   let isDemoMode = false;
+
+  data.mentor.forEach(function (mentor) {
+    if (!Number.isInteger(Number(mentor.kapasitas_murid)) || Number(mentor.kapasitas_murid) < 1) {
+      mentor.kapasitas_murid = 4;
+    }
+    if (!Number.isFinite(Number(mentor.tarif_per_anak))) mentor.tarif_per_anak = 0;
+    if (mentor.tanggal_bayar === '') mentor.tanggal_bayar = null;
+  });
+  if (!data.pengaturan.length) data.pengaturan.push({ id: 'global', tanggal_bayar: 5 });
+  if (!Number.isInteger(Number(data.pengaturan[0].tanggal_bayar))) data.pengaturan[0].tanggal_bayar = 5;
 
   const currentYear = document.querySelector('[data-current-year]');
   if (currentYear) currentYear.textContent = new Date().getFullYear();
@@ -95,6 +111,14 @@
     }));
     collections.forEach(function (collection, index) {
       data[collection] = loaded[index];
+    });
+    if (!data.pengaturan.length) data.pengaturan.push({ id: 'global', tanggal_bayar: 5 });
+    data.mentor.forEach(function (mentor) {
+      if (!Number.isInteger(Number(mentor.kapasitas_murid)) || Number(mentor.kapasitas_murid) < 1) {
+        mentor.kapasitas_murid = 4;
+      }
+      if (!Number.isFinite(Number(mentor.tarif_per_anak))) mentor.tarif_per_anak = 0;
+      if (mentor.tanggal_bayar === '') mentor.tanggal_bayar = null;
     });
   }
 
@@ -153,7 +177,118 @@
         return '<tr><td>' + escapeHTML(item.deskripsi) + '</td><td>' + escapeHTML(item.tanggal) + '</td><td>'
           + escapeHTML(item.jenis) + '</td><td>' + escapeHTML(formatCurrency(item.jumlah)) + '</td></tr>';
       }).join('');
+    renderDailyAssignments();
     renderDashboardChart();
+  }
+
+  function renderDailyAssignments() {
+    const dateInput = document.getElementById('assignment-date');
+    const mentorSelect = document.getElementById('assignment-mentor');
+    const studentSelect = document.getElementById('assignment-student');
+    const tbody = document.querySelector('#assignment-table tbody');
+    if (!dateInput || !mentorSelect || !studentSelect || !tbody) return;
+    if (!dateInput.value) dateInput.value = formatDateKey(new Date());
+    const date = dateInput.value;
+    dateInput.min = formatDateKey(new Date());
+    const assigned = data.penugasan_mentor.filter(function (assignment) { return assignment.tanggal === date; });
+    const activeMentors = data.mentor.filter(function (mentor) {
+      const assignedCount = assigned.filter(function (assignment) { return assignment.mentor_id === mentor.id; }).length;
+      return assignedCount < Number(mentor.kapasitas_murid || 0);
+    });
+    const previousMentorId = mentorSelect.value;
+    mentorSelect.innerHTML = activeMentors.map(function (mentor) {
+      const count = assigned.filter(function (assignment) { return assignment.mentor_id === mentor.id; }).length;
+      return '<option value="' + escapeHTML(mentor.id) + '"' + (mentor.id === previousMentorId ? ' selected' : '') + '>'
+        + escapeHTML(mentor.nama) + ' (' + count + '/' + Number(mentor.kapasitas_murid) + ')</option>';
+    }).join('');
+    const assignedStudentIds = assigned.map(function (assignment) { return assignment.siswa_id; });
+    const availableStudents = data.siswa.filter(function (student) {
+      return student.status === 'Aktif' && assignedStudentIds.indexOf(student.id) === -1;
+    });
+    studentSelect.innerHTML = availableStudents.map(function (student) {
+      return '<option value="' + escapeHTML(student.id) + '">' + escapeHTML(student.nama) + '</option>';
+    }).join('');
+    const button = document.getElementById('assign-student-button');
+    if (button) button.disabled = !activeMentors.length || !availableStudents.length;
+    const rows = assigned.map(function (assignment) {
+      const mentor = data.mentor.find(function (item) { return item.id === assignment.mentor_id; });
+      const student = data.siswa.find(function (item) { return item.id === assignment.siswa_id; });
+      return '<tr><td>' + escapeHTML(student ? student.nama : 'Siswa dihapus') + '</td><td>'
+        + escapeHTML(mentor ? mentor.nama : 'Mentor dihapus') + '</td><td class="table-actions"><button class="text-button text-danger"'
+        + ' type="button" data-action="remove-assignment" data-id="' + escapeHTML(assignment.id) + '">Hapus</button></td></tr>';
+    });
+    tbody.innerHTML = rows.length ? rows.join('')
+      : '<tr><td class="table-empty" colspan="3">Belum ada penugasan untuk tanggal ini.</td></tr>';
+    const message = document.getElementById('assignment-message');
+    if (message) message.textContent = !data.mentor.length ? 'Tambahkan mentor terlebih dahulu di halaman Data Mentor.'
+      : !availableStudents.length ? 'Tidak ada siswa aktif yang belum mendapat mentor pada tanggal ini.'
+        : !activeMentors.length ? 'Semua mentor telah mencapai batas murid untuk tanggal ini.' : '';
+  }
+
+  function getMonthlyMentorEarnings(mentorId, monthKey) {
+    const students = new Set(data.penugasan_mentor.filter(function (assignment) {
+      return assignment.mentor_id === mentorId && String(assignment.tanggal).slice(0, 7) === monthKey
+        && assignment.tanggal <= formatDateKey(new Date());
+    }).map(function (assignment) { return assignment.siswa_id; }));
+    const mentor = data.mentor.find(function (item) { return item.id === mentorId; });
+    return students.size * Number(mentor ? mentor.tarif_per_anak : 0);
+  }
+
+  function getMonthlyStudentCount(mentorId, monthKey) {
+    return new Set(data.penugasan_mentor.filter(function (assignment) {
+      return assignment.mentor_id === mentorId && String(assignment.tanggal).slice(0, 7) === monthKey
+        && assignment.tanggal <= formatDateKey(new Date());
+    }).map(function (assignment) { return assignment.siswa_id; })).size;
+  }
+
+  async function generateDueMentorPayments() {
+    const todayKey = formatDateKey(new Date());
+    const globalPaymentDay = Number(data.pengaturan[0].tanggal_bayar) || 5;
+    const periods = {};
+    data.penugasan_mentor.forEach(function (assignment) {
+      if (!assignment.tanggal || assignment.tanggal > todayKey) return;
+      const monthKey = String(assignment.tanggal).slice(0, 7);
+      if (!periods[assignment.mentor_id]) periods[assignment.mentor_id] = {};
+      periods[assignment.mentor_id][monthKey] = true;
+    });
+    for (const mentor of data.mentor) {
+      const months = Object.keys(periods[mentor.id] || {});
+      for (const monthKey of months) {
+        const monthStart = new Date(monthKey + '-01T00:00:00');
+        const payoutMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1);
+        const paymentDay = Number(mentor.tanggal_bayar) || globalPaymentDay;
+        const paymentDate = new Date(payoutMonth.getFullYear(), payoutMonth.getMonth(),
+          Math.min(paymentDay, new Date(payoutMonth.getFullYear(), payoutMonth.getMonth() + 1, 0).getDate()));
+        const paymentDateKey = formatDateKey(paymentDate);
+        if (paymentDateKey > todayKey || data.pembayaran_mentor.some(function (payment) {
+          return payment.mentor_id === mentor.id && payment.periode === monthKey + '-01';
+        })) continue;
+        const studentCount = getMonthlyStudentCount(mentor.id, monthKey);
+        const amount = studentCount * Number(mentor.tarif_per_anak || 0);
+        if (!studentCount || !amount) continue;
+        const values = {
+          mentor_id: mentor.id,
+          nama_mentor: mentor.nama,
+          periode: monthKey + '-01',
+          jumlah_siswa: studentCount,
+          tarif_per_anak: Number(mentor.tarif_per_anak),
+          jumlah: amount,
+          tanggal_bayar: paymentDateKey
+        };
+        if (isDemoMode) {
+          values.id = 'mentor-pay-' + mentor.id + '-' + monthKey;
+          values.created_at = paymentDateKey + 'T12:00:00';
+          data.pembayaran_mentor.push(values);
+          saveData('pembayaran_mentor');
+        } else {
+          const result = await authClient.from('pembayaran_mentor')
+            .upsert(values, { onConflict: 'mentor_id,periode', ignoreDuplicates: true })
+            .select('*');
+          if (result.error) throw new Error('Tidak dapat mencatat pembayaran mentor: ' + result.error.message);
+          if (result.data && result.data.length) data.pembayaran_mentor.push(result.data[0]);
+        }
+      }
+    }
   }
 
   function renderDashboardChart() {
@@ -302,7 +437,19 @@
         }
       }
     });
-    return data.keuangan.concat(recurringExpenses);
+    const mentorPayments = data.pembayaran_mentor.map(function (payment) {
+      return {
+        id: 'mentor-pay-' + payment.id,
+        deskripsi: 'Pendapatan mentor ' + payment.nama_mentor + ' (' + payment.jumlah_siswa + ' siswa, '
+          + payment.periode.slice(0, 7) + ')',
+        jenis: 'Pengeluaran',
+        jumlah: Number(payment.jumlah),
+        tanggal: payment.tanggal_bayar,
+        created_at: payment.tanggal_bayar + 'T12:00:00',
+        pembayaran_mentor_id: payment.id
+      };
+    });
+    return data.keuangan.concat(recurringExpenses, mentorPayments);
   }
 
   function formatDateKey(date) {
@@ -455,10 +602,12 @@
 
   function renderDataTable(collection) {
     const columns = collection === 'siswa'
-      ? [['nama', 'Nama'], ['nama_orang_tua', 'Nama orang tua'], ['telepon_orang_tua', 'Telepon orang tua'],
-        ['usia', 'Usia'], ['program', 'Program'], ['spp', 'SPP/bulan'], ['asal_sekolah', 'Asal sekolah'], ['status', 'Status']]
+      ? [['nama', 'Nama'], ['usia', 'Usia'], ['asal_sekolah', 'Asal sekolah'],
+        ['nama_orang_tua', 'Nama orang tua'], ['telepon_orang_tua', 'Telepon orang tua'],
+        ['program', 'Program'], ['spp', 'SPP/bulan'], ['status', 'Status']]
       : collection === 'mentor'
-        ? [['nama', 'Nama'], ['telepon', 'Nomor telepon']]
+        ? [['nama', 'Nama'], ['telepon', 'Nomor telepon'],
+          ['pendapatan', 'Pendapatan bulan ini']]
         : collection === 'program'
           ? [['nama', 'Program'], ['spp', 'SPP per bulan']]
           : collection === 'biaya_tetap'
@@ -471,6 +620,10 @@
     const query = (search ? search.value : '').trim().toLocaleLowerCase('id');
     function getColumnValue(item, columnName) {
       let value = item[columnName];
+      if (collection === 'mentor' && columnName === 'pendapatan') {
+        value = getMonthlyMentorEarnings(item.id, formatDateKey(new Date()).slice(0, 7));
+        return formatCurrency(value);
+      }
       if (collection === 'siswa' && columnName === 'spp') {
         const program = data.program.find(function (entry) {
           return entry.id === item.program_id || entry.nama === item.program;
@@ -496,9 +649,12 @@
           ? '<span class="status-pill ' + (item.status === 'Aktif' ? 'status-active' : 'status-pending') + '">' + escapeHTML(value) + '</span>'
           : escapeHTML(value);
         return '<td>' + content + '</td>';
-      }).join('') + (item.biaya_tetap_id
-        ? '<td class="table-actions">Biaya tetap</td>'
-        : '<td class="table-actions"><button class="text-button" type="button" data-action="edit" data-collection="'
+      }).join('') + (item.biaya_tetap_id || item.pembayaran_mentor_id
+        ? '<td class="table-actions">' + (item.pembayaran_mentor_id ? 'Otomatis' : 'Biaya tetap') + '</td>'
+        : '<td class="table-actions">' + (collection === 'mentor'
+          ? '<button class="text-button" type="button" data-action="configure-mentor" data-id="' + escapeHTML(item.id)
+            + '">Pengaturan</button>'
+          : '') + '<button class="text-button" type="button" data-action="edit" data-collection="'
           + collection + '" data-id="' + escapeHTML(item.id) + '">Ubah</button><button class="text-button text-danger" type="button" data-action="delete" data-id="'
           + escapeHTML(item.id) + '" data-collection="' + collection + '">Hapus</button></td>') + '</tr>';
     }).join('') : '<tr><td class="table-empty" colspan="' + (columns.length + 1) + '">Tidak ada data yang cocok.</td></tr>';
@@ -508,6 +664,10 @@
   }
 
   function renderCollection(collection) {
+    if (collection === 'mentor') {
+      const input = document.getElementById('global-payment-day');
+      if (input) input.value = data.pengaturan[0].tanggal_bayar;
+    }
     const isFinance = collection === 'keuangan';
     if (isFinance) {
       const financeRecords = getFinanceRecords();
@@ -541,11 +701,11 @@
     const fields = collection === 'siswa'
       ? [
         ['nama', 'Nama siswa', 'text', item && item.nama],
-        ['telepon_orang_tua', 'Nomor telepon orang tua', 'tel', item && item.telepon_orang_tua],
-        ['nama_orang_tua', 'Nama orang tua', 'text', item && item.nama_orang_tua],
         ['usia', 'Usia', 'number', item && item.usia],
-        ['program_id', 'Program yang diikuti', 'program', item && (item.program_id || (matchingProgram && matchingProgram.id))],
         ['asal_sekolah', 'Asal sekolah', 'text', item && item.asal_sekolah],
+        ['nama_orang_tua', 'Nama orang tua', 'text', item && item.nama_orang_tua],
+        ['telepon_orang_tua', 'Nomor telepon orang tua', 'tel', item && item.telepon_orang_tua],
+        ['program_id', 'Program yang diikuti', 'program', item && (item.program_id || (matchingProgram && matchingProgram.id))],
         ['status', 'Status', 'select', item && item.status]
       ]
       : collection === 'mentor'
@@ -553,6 +713,12 @@
           ['nama', 'Nama mentor', 'text', item && item.nama],
           ['telepon', 'Nomor telepon', 'tel', item && item.telepon]
         ]
+        : collection === 'mentor_settings'
+          ? [
+            ['kapasitas_murid', 'Maksimal murid yang diajar per hari', 'number', item && item.kapasitas_murid],
+            ['tarif_per_anak', 'Tarif per anak per bulan (rupiah)', 'number', item && item.tarif_per_anak],
+            ['tanggal_bayar', 'Tanggal bayar khusus (kosong = default global)', 'number', item && item.tanggal_bayar]
+          ]
         : collection === 'program'
           ? [
             ['nama', 'Nama program', 'text', item && item.nama],
@@ -572,6 +738,7 @@
         ];
     document.getElementById('dialog-title').textContent = (item ? 'Ubah ' : 'Tambah ')
       + (collection === 'siswa' ? 'siswa' : collection === 'mentor' ? 'mentor'
+        : collection === 'mentor_settings' ? 'pengaturan mentor'
         : collection === 'program' ? 'program' : collection === 'biaya_tetap' ? 'biaya tetap' : 'transaksi');
     dialogFields.innerHTML = fields.map(function (field) {
       const value = field[3] == null ? '' : String(field[3]);
@@ -589,9 +756,13 @@
               + escapeHTML(optionLabels[index]) + '</option>';
           }).join('') + '</select>';
       }
-      return '<label class="dialog-label" for="field-' + field[0] + '">' + field[1] + '</label><input required id="field-'
+      const optional = field[0] === 'tanggal_bayar';
+      const numericMin = field[0] === 'kapasitas_murid' || field[0] === 'tanggal_bayar' ? '1' : '0';
+      const numericMax = field[0] === 'tanggal_bayar' ? '31' : '';
+      return '<label class="dialog-label" for="field-' + field[0] + '">' + field[1] + '</label><input'
+        + (optional ? '' : ' required') + ' id="field-'
         + field[0] + '" name="' + field[0] + '" type="' + field[2] + '" value="' + escapeHTML(value) + '"'
-        + (field[2] === 'number' ? ' min="1" step="1"' : '')
+        + (field[2] === 'number' ? ' min="' + numericMin + '"' + (numericMax ? ' max="' + numericMax + '"' : '') + ' step="1"' : '')
         + (field[2] === 'date' ? ' max="9999-12-31"' : '')
         + (field[2] === 'tel' ? ' inputmode="tel" autocomplete="tel" maxlength="20" title="Masukkan nomor Indonesia yang valid, misalnya 081234567890 atau +6281234567890"' : '')
         + '>';
@@ -650,6 +821,7 @@
   viewContainer.addEventListener('change', function (event) {
     if (event.target.id === 'dashboard-chart-metric'
       || event.target.id === 'dashboard-chart-duration') renderDashboardChart();
+    if (event.target.id === 'assignment-date') renderDailyAssignments();
   });
 
   viewContainer.addEventListener('click', function (event) {
@@ -657,6 +829,14 @@
     if (!button) return;
     const action = button.dataset.action;
     const collection = button.dataset.collection || currentView;
+    if (action === 'assign-student') {
+      assignStudentForDate();
+      return;
+    }
+    if (action === 'remove-assignment') {
+      removeStudentAssignment(button.dataset.id);
+      return;
+    }
     if (action === 'add') {
       openForm(collection);
       return;
@@ -669,6 +849,8 @@
     if (!item) return;
     if (action === 'edit') {
       openForm(collection, item);
+    } else if (action === 'configure-mentor') {
+      openForm('mentor_settings', item);
     } else if (action === 'delete' && collection === 'program' && data.siswa.some(function (student) {
       return student.program_id === item.id || student.program === item.nama;
     })) {
@@ -694,6 +876,113 @@
     }
   });
 
+  async function assignStudentForDate() {
+    const date = document.getElementById('assignment-date').value;
+    const mentorId = document.getElementById('assignment-mentor').value;
+    const studentId = document.getElementById('assignment-student').value;
+    const message = document.getElementById('assignment-message');
+    const mentor = data.mentor.find(function (item) { return item.id === mentorId; });
+    const student = data.siswa.find(function (item) { return item.id === studentId; });
+    if (!date || !mentor || !student) {
+      message.textContent = 'Pilih tanggal, mentor, dan siswa sebelum membuat penugasan.';
+      return;
+    }
+    const assignedToday = data.penugasan_mentor.filter(function (item) { return item.tanggal === date; });
+    if (date < formatDateKey(new Date())) {
+      message.textContent = 'Penugasan baru hanya dapat dibuat untuk hari ini atau tanggal mendatang.';
+      return;
+    }
+    if (data.penugasan_mentor.some(function (item) { return item.tanggal === date && item.siswa_id === studentId; })) {
+      message.textContent = 'Siswa sudah mendapat mentor pada tanggal tersebut.';
+      return;
+    }
+    const mentorAssignmentCount = assignedToday.filter(function (item) { return item.mentor_id === mentorId; }).length;
+    if (mentorAssignmentCount >= Number(mentor.kapasitas_murid)) {
+      message.textContent = 'Mentor sudah mencapai batas maksimal murid untuk tanggal tersebut.';
+      return;
+    }
+    const assignment = {
+      tanggal: date,
+      mentor_id: mentorId,
+      siswa_id: studentId
+    };
+    const button = document.getElementById('assign-student-button');
+    button.disabled = true;
+    message.textContent = '';
+    try {
+      if (isDemoMode) {
+        assignment.id = 'assignment-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+        assignment.created_at = new Date().toISOString();
+        data.penugasan_mentor.unshift(assignment);
+        saveData('penugasan_mentor');
+      } else {
+        const saved = await saveRemoteRecord('penugasan_mentor', null, assignment);
+        data.penugasan_mentor.unshift(saved);
+      }
+      renderView();
+    } catch (error) {
+      message.textContent = 'Tidak dapat menyimpan penugasan: ' + error.message;
+      dashboardMessage.textContent = message.textContent;
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function removeStudentAssignment(id) {
+    const assignment = data.penugasan_mentor.find(function (item) { return item.id === id; });
+    if (!assignment || !window.confirm('Hapus penugasan siswa pada tanggal ' + assignment.tanggal + '?')) return;
+    try {
+      if (isDemoMode) {
+        data.penugasan_mentor = data.penugasan_mentor.filter(function (item) { return item.id !== id; });
+        saveData('penugasan_mentor');
+      } else {
+        await deleteRemoteRecord('penugasan_mentor', id);
+        data.penugasan_mentor = data.penugasan_mentor.filter(function (item) { return item.id !== id; });
+      }
+      renderView();
+    } catch (error) {
+      dashboardMessage.textContent = 'Tidak dapat menghapus penugasan: ' + error.message;
+    }
+  }
+
+  const paymentSettingsForm = document.getElementById('payment-settings-form');
+  if (paymentSettingsForm) {
+    paymentSettingsForm.addEventListener('submit', async function (event) {
+      event.preventDefault();
+      const input = document.getElementById('global-payment-day');
+      const day = Number(input.value);
+      if (!Number.isInteger(day) || day < 1 || day > 31) {
+        dashboardMessage.textContent = 'Tanggal pembayaran harus berupa angka antara 1 sampai 31.';
+        return;
+      }
+      const settings = { id: 'global', tanggal_bayar: day };
+      const button = paymentSettingsForm.querySelector('[type="submit"]');
+      button.disabled = true;
+      dashboardMessage.textContent = '';
+      try {
+        if (isDemoMode) {
+          data.pengaturan[0] = settings;
+          saveData('pengaturan');
+        } else {
+          const result = await authClient.from('pengaturan')
+            .upsert(settings, { onConflict: 'id' })
+            .select('*').single();
+          if (result.error) throw new Error(result.error.message);
+          data.pengaturan[0] = result.data;
+        }
+        await generateDueMentorPayments();
+        renderView();
+      } catch (error) {
+        dashboardMessage.textContent = 'Tidak dapat menyimpan tanggal pembayaran: ' + error.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
+  }
+
+  const globalPaymentDayInput = document.getElementById('global-payment-day');
+  if (globalPaymentDayInput) globalPaymentDayInput.value = data.pengaturan[0].tanggal_bayar;
+
   document.querySelectorAll('[data-close-dialog]').forEach(function (button) {
     button.addEventListener('click', function () { dataDialog.close(); });
   });
@@ -701,9 +990,11 @@
   dataForm.addEventListener('submit', async function (event) {
     event.preventDefault();
     if (!editing) return;
-    const collection = editing.collection;
+    const formCollection = editing.collection;
+    const collection = formCollection === 'mentor_settings' ? 'mentor' : formCollection;
+    const editedId = editing.id;
     const values = Object.fromEntries(new FormData(dataForm).entries());
-    if (collection === 'siswa' || collection === 'mentor') {
+    if (formCollection === 'siswa' || formCollection === 'mentor') {
       const phoneField = collection === 'siswa' ? 'telepon_orang_tua' : 'telepon';
       const normalizedPhone = normalizeIndonesianPhone(values[phoneField]);
       if (!normalizedPhone) {
@@ -727,6 +1018,25 @@
       values[collection === 'program' ? 'spp' : 'jumlah'] =
         Number(values[collection === 'program' ? 'spp' : 'jumlah']);
     }
+    if (formCollection === 'mentor_settings') {
+      values.kapasitas_murid = Number(values.kapasitas_murid);
+      values.tarif_per_anak = Number(values.tarif_per_anak);
+      values.tanggal_bayar = values.tanggal_bayar ? Number(values.tanggal_bayar) : null;
+      if (values.kapasitas_murid < 1 || values.tarif_per_anak < 0
+        || (values.tanggal_bayar !== null && (values.tanggal_bayar < 1 || values.tanggal_bayar > 31))) {
+        formMessage.textContent = 'Periksa kembali kapasitas, tarif, dan tanggal pembayaran mentor.';
+        return;
+      }
+      const dailyCounts = {};
+      data.penugasan_mentor.filter(function (assignment) { return assignment.mentor_id === editing.id; })
+        .forEach(function (assignment) {
+          dailyCounts[assignment.tanggal] = (dailyCounts[assignment.tanggal] || 0) + 1;
+        });
+      if (Object.keys(dailyCounts).some(function (date) { return dailyCounts[date] > values.kapasitas_murid; })) {
+        formMessage.textContent = 'Batas murid tidak boleh lebih kecil dari penugasan yang sudah terdaftar.';
+        return;
+      }
+    }
     if (collection === 'program' && data.program.some(function (program) {
       return program.id !== editing.id && program.nama.trim().toLocaleLowerCase('id')
         === values.nama.trim().toLocaleLowerCase('id');
@@ -748,6 +1058,11 @@
         } else {
           values.id = 'data-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
           values.created_at = new Date().toISOString();
+          if (collection === 'mentor') {
+            values.kapasitas_murid = 4;
+            values.tarif_per_anak = 0;
+            values.tanggal_bayar = null;
+          }
           data[collection].unshift(values);
         }
         locallyPersisted = saveData(collection);
@@ -765,6 +1080,16 @@
       editing = null;
       renderView();
       if (locallyPersisted) dashboardMessage.textContent = '';
+      if (formCollection === 'mentor_settings') {
+        const mentor = data.mentor.find(function (item) { return item.id === editedId; });
+        if (mentor) Object.assign(mentor, values);
+        if (isDemoMode) saveData('mentor');
+        try {
+          await generateDueMentorPayments();
+        } catch (error) {
+          dashboardMessage.textContent = 'Pengaturan tersimpan, tetapi pembayaran mentor belum dapat dicatat: ' + error.message;
+        }
+      }
     } catch (error) {
       const message = 'Tidak dapat menyimpan data: ' + error.message;
       dashboardMessage.textContent = message;
@@ -819,7 +1144,14 @@
     }
 
     if (demoMode) {
+      isDemoMode = true;
       showDashboard({ email: 'demo@jarimath.local' }, true);
+      try {
+        await generateDueMentorPayments();
+        renderView();
+      } catch (error) {
+        dashboardMessage.textContent = 'Tidak dapat menghitung pembayaran mentor: ' + error.message;
+      }
       return;
     }
 
@@ -844,6 +1176,12 @@
       }
       viewContainer.hidden = false;
       showDashboard(sessionData.session.user, false);
+      try {
+        await generateDueMentorPayments();
+        renderView();
+      } catch (error) {
+        dashboardMessage.textContent = 'Tidak dapat menghitung pembayaran mentor: ' + error.message;
+      }
     } catch (error) {
       returnToLogin(error.message || 'Tidak dapat memulai koneksi Supabase.');
     }
