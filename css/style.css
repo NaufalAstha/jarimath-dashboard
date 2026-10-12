@@ -144,6 +144,7 @@ h1, h2, h3 { font-family: 'Manrope', sans-serif; }
 .form-hint { margin: -8px 0 14px; color: #687581; font-size: 12px; }
 .assignment-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; padding: 18px 22px; }
 .assignment-controls .dialog-label { margin: 0; }
+.assignment-controls .button { flex-basis: 100%; width: fit-content; margin-top: 4px; }
 .assignment-controls input,
 .assignment-controls select { min-width: 150px; height: 40px; padding: 0 10px; border: 1px solid #e2e7eb; border-radius: 7px; color: #303943; background: #fff; font: inherit; }
 .assignment-message { margin: 0 22px 12px; }
