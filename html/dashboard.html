@@ -13,22 +13,21 @@
   <div class="dashboard-shell">
     <aside class="sidebar">
       <a class="brand" href="dashboard.html" aria-label="Jarimath Kids">
-        <span class="brand-mark" aria-hidden="true">J</span>
         <span class="brand-name">jarimath<span> kids</span></span>
       </a>
       <p class="nav-label">MENU UTAMA</p>
       <nav aria-label="Menu utama">
         <a class="nav-item nav-item-active" href="dashboard.html" aria-current="page">
-          <span class="nav-icon" aria-hidden="true">▦</span> Dashboard
+          Dashboard
         </a>
         <a class="nav-item" href="siswa.html">
-          <span class="nav-icon" aria-hidden="true">♧</span> Data Siswa
+          Data Siswa
         </a>
         <a class="nav-item" href="mentor.html">
-          <span class="nav-icon" aria-hidden="true">♙</span> Data Mentor
+          Data Mentor
         </a>
         <a class="nav-item" href="keuangan.html">
-          <span class="nav-icon" aria-hidden="true">▤</span> Laporan Keuangan
+          Laporan Keuangan
         </a>
       </nav>
       <div class="sidebar-bottom">
@@ -74,33 +73,44 @@
             <article class="summary-card">
               <div class="card-topline"><span>Saldo tercatat</span><span class="metric-icon" aria-hidden="true">↗</span></div>
               <p id="recorded-balance" class="metric-value">Rp0</p>
-              <p class="metric-note">Dari transaksi demo</p>
+              <p class="metric-note">Pemasukan dikurangi pengeluaran</p>
             </article>
           </section>
           <section class="content-card chart-card" aria-labelledby="dashboard-chart-title">
             <div class="section-heading chart-heading">
               <div>
                 <h2 id="dashboard-chart-title">Grafik ringkasan</h2>
-                <p id="dashboard-chart-description" class="muted">Jumlah murid yang terdaftar menurut status saat ini.</p>
+                <p id="dashboard-chart-description" class="muted">Jumlah murid baru berdasarkan tanggal pendaftaran.</p>
               </div>
-              <label class="chart-select-label" for="dashboard-chart-metric">
-                Tampilkan
-                <select id="dashboard-chart-metric">
-                  <option value="murid">Murid</option>
-                  <option value="revenue">Revenue</option>
-                  <option value="margin">Margin profit</option>
-                  <option value="cost">Cost</option>
-                </select>
-              </label>
+              <div class="chart-controls">
+                <label class="chart-select-label" for="dashboard-chart-metric">
+                  Tampilkan
+                  <select id="dashboard-chart-metric">
+                    <option value="murid">Murid</option>
+                    <option value="revenue">Revenue</option>
+                    <option value="margin">Margin profit</option>
+                    <option value="cost">Cost</option>
+                  </select>
+                </label>
+                <label class="chart-select-label" for="dashboard-chart-duration">
+                  Periode
+                  <select id="dashboard-chart-duration">
+                    <option value="today">Hari ini</option>
+                    <option value="week">Minggu ini</option>
+                    <option value="month" selected>Bulan ini</option>
+                    <option value="year">Tahun ini</option>
+                  </select>
+                </label>
+              </div>
             </div>
             <div id="dashboard-chart" class="chart-plot"></div>
-            <p id="dashboard-chart-note" class="chart-note">Jumlah murid terdaftar saat ini berdasarkan status.</p>
+            <p id="dashboard-chart-note" class="chart-note">Jumlah murid baru berdasarkan tanggal pendaftaran.</p>
           </section>
           <section class="content-card">
             <div class="section-heading">
               <div>
                 <h2>Aktivitas terbaru</h2>
-                <p class="muted">Transaksi terakhir yang tercatat pada data demo.</p>
+                <p class="muted">Transaksi terakhir yang tercatat.</p>
               </div>
               <a class="button button-outline" href="keuangan.html">Buka laporan</a>
             </div>
@@ -127,6 +137,7 @@
         <button class="dialog-close" type="button" data-close-dialog aria-label="Tutup">×</button>
       </div>
       <div id="dialog-fields" class="dialog-fields"></div>
+      <p id="form-message" class="form-message" role="alert" aria-live="polite"></p>
       <div class="dialog-actions">
         <button class="button button-outline" type="button" data-close-dialog>Batal</button>
         <button class="button button-primary" type="submit">Simpan</button>

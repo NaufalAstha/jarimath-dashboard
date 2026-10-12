@@ -6,6 +6,7 @@
   const dataDialog = document.getElementById('data-dialog');
   const dataForm = document.getElementById('data-form');
   const dialogFields = document.getElementById('dialog-fields');
+  const formMessage = document.getElementById('form-message');
   const demoModeKey = 'jarimath-demo-mode';
   const loginMessageKey = 'jarimath-login-message';
   const storageKeys = {
@@ -33,6 +34,7 @@
   let data = loadData();
   let currentView = document.body.dataset.page;
   let editing = null;
+  let isDemoMode = false;
 
   const currentYear = document.querySelector('[data-current-year]');
   if (currentYear) currentYear.textContent = new Date().getFullYear();
@@ -70,6 +72,42 @@
     }
   }
 
+  async function loadRemoteData() {
+    const collections = Object.keys(storageKeys);
+    const loaded = await Promise.all(collections.map(async function (collection) {
+      const result = await authClient.from(collection)
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (result.error) {
+        throw new Error('Tabel ' + collection + ': ' + result.error.message);
+      }
+      if (!Array.isArray(result.data)) {
+        throw new Error('Supabase mengembalikan format data yang tidak valid untuk tabel ' + collection + '.');
+      }
+      return result.data;
+    }));
+    collections.forEach(function (collection, index) {
+      data[collection] = loaded[index];
+    });
+  }
+
+  async function saveRemoteRecord(collection, id, values) {
+    const request = id
+      ? authClient.from(collection).update(values).eq('id', id)
+      : authClient.from(collection).insert(values);
+    const result = await request.select('*').single();
+    if (result.error) throw new Error(result.error.message);
+    return result.data;
+  }
+
+  async function deleteRemoteRecord(collection, id) {
+    const result = await authClient.from(collection).delete().eq('id', id).select('id');
+    if (result.error) throw new Error(result.error.message);
+    if (!result.data || result.data.length !== 1) {
+      throw new Error('Data tidak ditemukan atau admin tidak memiliki izin untuk menghapusnya.');
+    }
+  }
+
   function escapeHTML(value) {
     return String(value).replace(/[&<>"']/g, function (character) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character];
@@ -83,6 +121,7 @@
   }
 
   function showDashboard(user, isDemo) {
+    isDemoMode = isDemo;
     accountEmail.textContent = isDemo ? 'Mode demo · data lokal' : (user.email || '');
     dashboardMessage.textContent = storageWarning
       ? 'Data demo tidak dapat dibaca. Data contoh sementara digunakan.'
@@ -100,7 +139,10 @@
       return item.status === 'Aktif';
     }).length;
     document.getElementById('recorded-balance').textContent = formatCurrency(income - expense);
-    document.getElementById('activity-table-body').innerHTML = data.keuangan.slice().reverse().slice(0, 5)
+    document.getElementById('activity-table-body').innerHTML = data.keuangan.slice()
+      .sort(function (left, right) {
+        return String(right.tanggal).localeCompare(String(left.tanggal));
+      }).slice(0, 5)
       .map(function (item) {
         return '<tr><td>' + escapeHTML(item.deskripsi) + '</td><td>' + escapeHTML(item.tanggal) + '</td><td>'
           + escapeHTML(item.jenis) + '</td><td>' + escapeHTML(formatCurrency(item.jumlah)) + '</td></tr>';
@@ -110,40 +152,61 @@
 
   function renderDashboardChart() {
     const selector = document.getElementById('dashboard-chart-metric');
+    const durationSelector = document.getElementById('dashboard-chart-duration');
     const chart = document.getElementById('dashboard-chart');
     const description = document.getElementById('dashboard-chart-description');
     const note = document.getElementById('dashboard-chart-note');
-    if (!selector || !chart || !description || !note) return;
+    if (!selector || !durationSelector || !chart || !description || !note) return;
 
     const metric = selector.value;
-    const monthFormatter = new Intl.DateTimeFormat('id-ID', { month: 'short' });
+    const duration = durationSelector.value;
+    const buckets = createChartBuckets(duration);
+    const financialInterval = duration === 'today' ? 'jam' : duration === 'year' ? 'bulan' : 'hari';
+    const currencyFormatter = new Intl.NumberFormat('id-ID', {
+      notation: 'compact', maximumFractionDigits: 1
+    });
     const metrics = {
       murid: {
-        description: 'Jumlah murid yang terdaftar menurut status saat ini.',
-        note: 'Jumlah murid terdaftar saat ini berdasarkan status.',
+        description: duration === 'today'
+          ? 'Jumlah murid baru per jam hari ini.'
+          : 'Jumlah murid baru berdasarkan tanggal pendaftaran.',
+        note: 'Tanggal dan jam pendaftaran menggunakan waktu data murid dibuat.',
         color: '#526779',
-        values: [
-          { label: 'Aktif', value: data.siswa.filter(function (student) { return student.status === 'Aktif'; }).length },
-          { label: 'Menunggu', value: data.siswa.filter(function (student) { return student.status === 'Menunggu'; }).length }
-        ]
+        values: buckets.map(function (bucket) {
+          return {
+            label: bucket.label,
+            title: bucket.title,
+            value: data.siswa.filter(function (student) {
+              const createdAt = student.created_at ? new Date(student.created_at) : new Date();
+              return !Number.isNaN(createdAt.getTime())
+                && getChartBucketKey(createdAt, duration) === bucket.key;
+            }).length
+          };
+        })
       },
       revenue: {
-        description: 'Total pemasukan dari transaksi per bulan dalam 6 bulan terakhir.',
-        note: 'Revenue dihitung dari transaksi berjenis pemasukan.',
+        description: 'Revenue pemasukan per ' + financialInterval + ' dalam periode yang dipilih.',
+        note: duration === 'today'
+          ? 'Transaksi bertanggal hari ini dikelompokkan berdasarkan jam pencatatan.'
+          : 'Transaksi dikelompokkan berdasarkan tanggal transaksi.',
         color: '#547b68',
         values: [],
         kind: 'currency'
       },
       margin: {
-        description: 'Margin profit bulanan dalam 6 bulan terakhir.',
-        note: 'Margin profit = (revenue - cost) / revenue. Bulan tanpa revenue ditampilkan sebagai —.',
+        description: 'Margin profit per ' + financialInterval + ' dalam periode yang dipilih.',
+        note: duration === 'today'
+          ? 'Margin profit per jam; periode tanpa revenue ditampilkan sebagai —.'
+          : 'Margin profit = (revenue - cost) / revenue. Periode tanpa revenue ditampilkan sebagai —.',
         color: '#7c6a9a',
         values: [],
         kind: 'percent'
       },
       cost: {
-        description: 'Total pengeluaran dari transaksi per bulan dalam 6 bulan terakhir.',
-        note: 'Cost dihitung dari transaksi berjenis pengeluaran.',
+        description: 'Cost pengeluaran per ' + financialInterval + ' dalam periode yang dipilih.',
+        note: duration === 'today'
+          ? 'Transaksi bertanggal hari ini dikelompokkan berdasarkan jam pencatatan.'
+          : 'Transaksi dikelompokkan berdasarkan tanggal transaksi.',
         color: '#a06c58',
         values: [],
         kind: 'currency'
@@ -154,39 +217,116 @@
     note.textContent = selectedMetric.note;
 
     if (metric !== 'murid') {
-      const today = new Date();
-      const months = [];
-      for (let offset = 5; offset >= 0; offset -= 1) {
-        const date = new Date(today.getFullYear(), today.getMonth() - offset, 1);
-        const key = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
-        months.push({ key: key, label: monthFormatter.format(date) });
-      }
-      const totalsByMonth = {};
+      const totalsByDate = {};
       data.keuangan.forEach(function (transaction) {
-        const key = String(transaction.tanggal || '').slice(0, 7);
-        if (!/^\d{4}-\d{2}$/.test(key)) return;
-        if (!totalsByMonth[key]) totalsByMonth[key] = { revenue: 0, cost: 0 };
+        let key;
+        if (duration === 'today') {
+          if (String(transaction.tanggal || '').slice(0, 10) !== buckets[0].dateKey) return;
+          const createdAt = transaction.created_at
+            ? new Date(transaction.created_at)
+            : new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), 12);
+          if (Number.isNaN(createdAt.getTime())) return;
+          key = getChartBucketKey(createdAt, duration);
+        } else {
+          key = duration === 'year'
+            ? String(transaction.tanggal || '').slice(0, 7)
+            : String(transaction.tanggal || '').slice(0, 10);
+        }
+        const validKey = duration === 'today'
+          ? /^\d{2}$/.test(key)
+          : duration === 'year' ? /^\d{4}-\d{2}$/.test(key) : /^\d{4}-\d{2}-\d{2}$/.test(key);
+        if (!validKey) return;
+        if (!totalsByDate[key]) totalsByDate[key] = { revenue: 0, cost: 0 };
         if (transaction.jenis === 'Pemasukan') {
-          totalsByMonth[key].revenue += Number(transaction.jumlah) || 0;
+          totalsByDate[key].revenue += Number(transaction.jumlah) || 0;
         } else if (transaction.jenis === 'Pengeluaran') {
-          totalsByMonth[key].cost += Number(transaction.jumlah) || 0;
+          totalsByDate[key].cost += Number(transaction.jumlah) || 0;
         }
       });
-      selectedMetric.values = months.map(function (month) {
-        const totals = totalsByMonth[month.key] || { revenue: 0, cost: 0 };
+      selectedMetric.values = buckets.map(function (bucket) {
+        const totals = totalsByDate[bucket.key] || { revenue: 0, cost: 0 };
         let value;
         if (metric === 'revenue') value = totals.revenue;
         else if (metric === 'cost') value = totals.cost;
         else value = totals.revenue ? (totals.revenue - totals.cost) / totals.revenue * 100 : null;
-        return { label: month.label, value: value };
+        return { label: bucket.label, title: bucket.title, value: value };
       });
     }
 
-    chart.innerHTML = renderBarChart(selectedMetric.values, selectedMetric);
+    chart.innerHTML = renderLineChart(selectedMetric.values, selectedMetric, currencyFormatter);
   }
 
-  function renderBarChart(values, metric) {
-    const width = 760;
+  function formatDateKey(date) {
+    return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-'
+      + String(date.getDate()).padStart(2, '0');
+  }
+
+  function getChartBucketKey(date, duration) {
+    if (duration === 'today') return String(date.getHours()).padStart(2, '0');
+    const dateKey = formatDateKey(date);
+    return duration === 'year' ? dateKey.slice(0, 7) : dateKey;
+  }
+
+  function createChartBuckets(duration) {
+    const today = new Date();
+    const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const weekdayFormatter = new Intl.DateTimeFormat('id-ID', { weekday: 'short' });
+    const monthFormatter = new Intl.DateTimeFormat('id-ID', { month: 'short' });
+    const fullDateFormatter = new Intl.DateTimeFormat('id-ID', {
+      weekday: 'long', day: 'numeric', month: 'long'
+    });
+    const buckets = [];
+    if (duration === 'today') {
+      for (let hour = 0; hour < 24; hour += 1) {
+        const key = String(hour).padStart(2, '0');
+        buckets.push({
+          key: key,
+          label: hour % 4 === 0 ? key : '',
+          title: key + ':00',
+          dateKey: formatDateKey(start)
+        });
+      }
+      return buckets;
+    }
+    if (duration === 'week') {
+      const monday = new Date(start);
+      monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+      for (let offset = 0; offset < 7; offset += 1) {
+        const date = new Date(monday);
+        date.setDate(monday.getDate() + offset);
+        buckets.push({
+          key: formatDateKey(date),
+          label: weekdayFormatter.format(date),
+          title: fullDateFormatter.format(date)
+        });
+      }
+      return buckets;
+    }
+    if (duration === 'year') {
+      for (let month = 0; month < 12; month += 1) {
+        const date = new Date(start.getFullYear(), month, 1);
+        buckets.push({
+          key: date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0'),
+          label: monthFormatter.format(date),
+          title: new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(date)
+        });
+      }
+      return buckets;
+    }
+    const daysInMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate();
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      const date = new Date(start.getFullYear(), start.getMonth(), day);
+      buckets.push({
+        key: formatDateKey(date),
+        label: day === 1 || day % 5 === 0 ? String(day) : '',
+        title: fullDateFormatter.format(date)
+      });
+    }
+    return buckets;
+  }
+
+  function renderLineChart(values, metric, currencyFormatter) {
+    const width = Math.max(760, values.length * 38);
     const height = 300;
     const left = 78;
     const right = 20;
@@ -202,14 +342,16 @@
     const padding = (maximum - minimum) * 0.08;
     if (minimum < 0) minimum -= padding;
     if (maximum > 0) maximum += padding;
-    const zeroY = top + (maximum / (maximum - minimum)) * plotHeight;
-    const stepX = plotWidth / values.length;
-    const barWidth = Math.min(54, stepX * 0.48);
+    const stepX = values.length > 1 ? plotWidth / (values.length - 1) : 0;
+    const pointX = function (index) {
+      return values.length > 1 ? left + stepX * index : left + plotWidth / 2;
+    };
+    const pointY = function (value) {
+      return top + ((maximum - value) / (maximum - minimum)) * plotHeight;
+    };
     const axisLabel = function (value) {
       if (metric.kind === 'currency') {
-        return 'Rp' + new Intl.NumberFormat('id-ID', {
-          notation: 'compact', maximumFractionDigits: 1
-        }).format(value);
+        return 'Rp' + currencyFormatter.format(value);
       }
       return metric.kind === 'percent' ? Math.round(value) + '%' : Math.round(value).toString();
     };
@@ -218,7 +360,7 @@
       if (metric.kind === 'currency') return formatCurrency(value);
       return metric.kind === 'percent' ? value.toFixed(1) + '%' : String(value);
     };
-    let svg = '<svg class="dashboard-chart-svg" viewBox="0 0 ' + width + ' ' + height
+    let svg = '<svg class="dashboard-chart-svg" style="width:' + width + 'px" viewBox="0 0 ' + width + ' ' + height
       + '" role="img" aria-label="Grafik ' + escapeHTML(metric.description) + '">';
     for (let index = 0; index <= 4; index += 1) {
       const value = maximum - (maximum - minimum) * index / 4;
@@ -227,22 +369,35 @@
         + '" y2="' + y + '"></line><text class="chart-axis-label" x="' + (left - 10) + '" y="' + (y + 4)
         + '" text-anchor="end">' + escapeHTML(axisLabel(value)) + '</text>';
     }
-    svg += '<line class="chart-baseline" x1="' + left + '" y1="' + zeroY + '" x2="' + (width - right)
-      + '" y2="' + zeroY + '"></line>';
+    let segment = [];
+    function appendSegment() {
+      if (segment.length > 1) {
+        svg += '<polyline class="chart-line" points="' + segment.map(function (point) {
+          return point.x + ',' + point.y;
+        }).join(' ') + '" stroke="' + metric.color + '"></polyline>';
+      }
+      segment = [];
+    }
     values.forEach(function (item, index) {
-      const centerX = left + stepX * (index + 0.5);
+      const x = pointX(index);
       if (Number.isFinite(item.value)) {
-        const valueY = top + ((maximum - item.value) / (maximum - minimum)) * plotHeight;
-        const barY = Math.min(zeroY, valueY);
-        const barHeight = Math.max(1, Math.abs(zeroY - valueY));
-        svg += '<rect class="chart-bar" x="' + (centerX - barWidth / 2) + '" y="' + barY + '" width="'
-          + barWidth + '" height="' + barHeight + '" rx="4" fill="' + metric.color + '"><title>'
-          + escapeHTML(item.label + ': ' + valueLabel(item.value)) + '</title></rect>';
+        const y = pointY(item.value);
+        segment.push({ x: x, y: y });
+      }
+    });
+    appendSegment();
+    values.forEach(function (item, index) {
+      const x = pointX(index);
+      if (Number.isFinite(item.value)) {
+        const y = pointY(item.value);
+        const pointLabel = item.title || item.label || 'Titik ' + (index + 1);
+        svg += '<circle class="chart-point" cx="' + x + '" cy="' + y + '" r="4" fill="' + metric.color
+          + '"><title>' + escapeHTML(pointLabel + ': ' + valueLabel(item.value)) + '</title></circle>';
       } else {
-        svg += '<text class="chart-empty-label" x="' + centerX + '" y="' + (zeroY - 8)
+        svg += '<text class="chart-empty-label" x="' + x + '" y="' + (top + plotHeight / 2)
           + '" text-anchor="middle">—</text>';
       }
-      svg += '<text class="chart-category-label" x="' + centerX + '" y="' + (height - 17)
+      svg += '<text class="chart-category-label" x="' + x + '" y="' + (height - 17)
         + '" text-anchor="middle">' + escapeHTML(item.label) + '</text>';
     });
     return svg + '</svg>';
@@ -301,6 +456,7 @@
 
   function openForm(collection, item) {
     editing = { collection: collection, id: item ? item.id : null };
+    formMessage.textContent = '';
     const fields = collection === 'siswa'
       ? [
         ['nama', 'Nama siswa', 'text', item && item.nama],
@@ -335,7 +491,7 @@
         + (field[2] === 'number' ? ' min="1" step="1"' : '') + (field[2] === 'date' ? ' max="9999-12-31"' : '') + '>';
     }).join('');
     if (collection === 'keuangan' && !item) {
-      document.getElementById('field-tanggal').value = new Date().toISOString().slice(0, 10);
+      document.getElementById('field-tanggal').value = formatDateKey(new Date());
     }
     dataDialog.showModal();
   }
@@ -364,7 +520,8 @@
   });
 
   viewContainer.addEventListener('change', function (event) {
-    if (event.target.id === 'dashboard-chart-metric') renderDashboardChart();
+    if (event.target.id === 'dashboard-chart-metric'
+      || event.target.id === 'dashboard-chart-duration') renderDashboardChart();
   });
 
   viewContainer.addEventListener('click', function (event) {
@@ -384,9 +541,23 @@
     if (action === 'edit') {
       openForm(currentView, item);
     } else if (action === 'delete' && window.confirm('Hapus data "' + (item.nama || item.deskripsi) + '"?')) {
-      data[currentView] = data[currentView].filter(function (record) { return record.id !== item.id; });
-      saveData(currentView);
-      renderView();
+      button.disabled = true;
+      dashboardMessage.textContent = '';
+      (async function () {
+        try {
+          if (isDemoMode) {
+            data[currentView] = data[currentView].filter(function (record) { return record.id !== item.id; });
+            saveData(currentView);
+          } else {
+            await deleteRemoteRecord(currentView, item.id);
+            data[currentView] = data[currentView].filter(function (record) { return record.id !== item.id; });
+          }
+          renderView();
+        } catch (error) {
+          dashboardMessage.textContent = 'Tidak dapat menghapus data: ' + error.message;
+          button.disabled = false;
+        }
+      })();
     }
   });
 
@@ -394,24 +565,50 @@
     button.addEventListener('click', function () { dataDialog.close(); });
   });
 
-  dataForm.addEventListener('submit', function (event) {
+  dataForm.addEventListener('submit', async function (event) {
     event.preventDefault();
     if (!editing) return;
     const collection = editing.collection;
     const values = Object.fromEntries(new FormData(dataForm).entries());
     if (collection === 'keuangan') values.jumlah = Number(values.jumlah);
-    if (editing.id) {
-      data[collection] = data[collection].map(function (item) {
-        return item.id === editing.id ? Object.assign({}, item, values) : item;
-      });
-    } else {
-      values.id = 'data-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
-      data[collection].unshift(values);
+    const submitButton = dataForm.querySelector('[type="submit"]');
+    submitButton.disabled = true;
+    dashboardMessage.textContent = '';
+    formMessage.textContent = '';
+    try {
+      let locallyPersisted = true;
+      if (isDemoMode) {
+        if (editing.id) {
+          data[collection] = data[collection].map(function (item) {
+            return item.id === editing.id ? Object.assign({}, item, values) : item;
+          });
+        } else {
+          values.id = 'data-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+          values.created_at = new Date().toISOString();
+          data[collection].unshift(values);
+        }
+        locallyPersisted = saveData(collection);
+      } else {
+        const savedRecord = await saveRemoteRecord(collection, editing.id, values);
+        if (editing.id) {
+          data[collection] = data[collection].map(function (item) {
+            return item.id === editing.id ? savedRecord : item;
+          });
+        } else {
+          data[collection].unshift(savedRecord);
+        }
+      }
+      dataDialog.close();
+      editing = null;
+      renderView();
+      if (locallyPersisted) dashboardMessage.textContent = '';
+    } catch (error) {
+      const message = 'Tidak dapat menyimpan data: ' + error.message;
+      dashboardMessage.textContent = message;
+      formMessage.textContent = message;
+    } finally {
+      submitButton.disabled = false;
     }
-    saveData(collection);
-    dataDialog.close();
-    editing = null;
-    renderView();
   });
 
   dataDialog.addEventListener('click', function (event) {
@@ -455,6 +652,15 @@
         returnToLogin('Sesi login tidak ditemukan. Silakan masuk kembali.');
         return;
       }
+      viewContainer.hidden = true;
+      dashboardMessage.textContent = 'Memuat data dari Supabase...';
+      try {
+        await loadRemoteData();
+      } catch (error) {
+        dashboardMessage.textContent = 'Tidak dapat memuat data dari Supabase: ' + error.message;
+        return;
+      }
+      viewContainer.hidden = false;
       showDashboard(sessionData.session.user, false);
     } catch (error) {
       returnToLogin(error.message || 'Tidak dapat memulai koneksi Supabase.');

@@ -94,7 +94,6 @@ h1, h2, h3 { font-family: 'Manrope', sans-serif; }
   padding: 0 11px; border-radius: 7px; color: #656565; text-decoration: none; font-size: 12px;
 }
 .nav-item-active { color: #252525; background: #f2f2f0; font-weight: 600; }
-.nav-icon { width: 17px; color: #555; font-size: 17px; text-align: center; }
 .sidebar-bottom { margin-top: auto; }
 .help-card { display: flex; gap: 10px; padding: 13px 11px; border: 1px solid #ededeb; border-radius: 8px; background: #fafaf9; }
 .help-icon { width: 18px; height: 18px; flex: none; display: grid; place-items: center; border: 1px solid #c7c7c4; border-radius: 50%; color: #777; font-size: 11px; }
@@ -132,6 +131,7 @@ h1, h2, h3 { font-family: 'Manrope', sans-serif; }
 .section-heading h2 { margin: 0 0 5px; font-size: 14px; letter-spacing: -.25px; }
 .section-heading .muted { margin: 0; font-size: 11px; }
 .chart-heading { gap: 20px; }
+.chart-controls { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
 .chart-select-label { display: flex; align-items: center; gap: 10px; color: #626d77; font-size: 13px; font-weight: 600; }
 .chart-select-label select {
   min-width: 160px; height: 40px; padding: 0 34px 0 12px; border: 1px solid #e2e7eb;
@@ -139,14 +139,14 @@ h1, h2, h3 { font-family: 'Manrope', sans-serif; }
 }
 .chart-select-label select:focus { border-color: #8996a2; box-shadow: 0 0 0 3px rgba(55, 75, 95, .08); }
 .chart-plot { width: 100%; padding: 16px 18px 0; overflow-x: auto; }
-.dashboard-chart-svg { display: block; width: 100%; min-width: 520px; height: auto; overflow: visible; }
+.dashboard-chart-svg { display: block; min-width: 520px; max-width: none; height: auto; overflow: visible; }
 .chart-gridline { stroke: #edf0f2; stroke-width: 1; }
-.chart-baseline { stroke: #cbd2d8; stroke-width: 1.2; }
+.chart-line { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.chart-point { stroke: #fff; stroke-width: 2; }
 .chart-axis-label, .chart-category-label, .chart-empty-label { fill: #7e8992; font: 12px 'DM Sans', sans-serif; }
 .chart-category-label { fill: #515d67; font-size: 13px; }
+.chart-axis-label { font-size: 11px; }
 .chart-empty-label { fill: #9299a1; font-size: 15px; }
-.chart-bar { opacity: .9; transition: opacity .15s; }
-.chart-bar:hover { opacity: 1; }
 .chart-note { margin: 0; padding: 0 24px 19px; color: #818b95; font-size: 12px; line-height: 1.5; }
 .empty-state { min-height: 205px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 25px; text-align: center; }
 .empty-icon { width: 39px; height: 39px; display: grid; place-items: center; margin-bottom: 11px; border-radius: 10px; background: #f3f3f1; color: #70706d; font-size: 20px; }
@@ -171,7 +171,6 @@ h1, h2, h3 { font-family: 'Manrope', sans-serif; }
   .nav-label, .sidebar-bottom { display: none; }
   .sidebar nav { margin-left: auto; }
   .nav-item { min-height: 35px; padding: 0 10px; font-size: 11px; }
-  .nav-icon { font-size: 15px; }
   .main-area { min-height: calc(100vh - 59px); margin-left: 0; }
   .topbar { height: 66px; padding: 0 17px; }
   .topbar-label { font-size: 7px; }
@@ -267,7 +266,8 @@ tbody tr:last-child td { border-bottom: 0; }
   .table-heading { align-items: flex-start; flex-direction: column; }
   .table-toolbar { width: 100%; justify-content: flex-start; }
   .chart-heading { align-items: flex-start; flex-direction: column; }
-  .chart-select-label { width: 100%; justify-content: space-between; }
+  .chart-controls { width: 100%; justify-content: flex-start; }
+  .chart-select-label { flex: 1; justify-content: space-between; }
   .chart-select-label select { flex: 1; }
 }
 @media (max-width: 620px) {
