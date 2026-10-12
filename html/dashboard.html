@@ -84,12 +84,18 @@
               </div>
             </div>
             <div class="assignment-controls">
-              <label class="dialog-label" for="assignment-date">Tanggal</label>
-              <input id="assignment-date" type="date">
-              <label class="dialog-label" for="assignment-student">Siswa</label>
-              <select id="assignment-student"></select>
-              <label class="dialog-label" for="assignment-mentor">Mentor</label>
-              <select id="assignment-mentor"></select>
+              <div class="assignment-field">
+                <label class="dialog-label" for="assignment-date">Tanggal</label>
+                <input id="assignment-date" type="date">
+              </div>
+              <div class="assignment-field">
+                <label class="dialog-label" for="assignment-student">Siswa</label>
+                <select id="assignment-student"></select>
+              </div>
+              <div class="assignment-field">
+                <label class="dialog-label" for="assignment-mentor">Mentor</label>
+                <select id="assignment-mentor"></select>
+              </div>
               <button id="assign-student-button" class="button button-primary" type="button" data-action="assign-student">Tetapkan mentor</button>
             </div>
             <p id="assignment-message" class="dashboard-message assignment-message" role="status" aria-live="polite"></p>

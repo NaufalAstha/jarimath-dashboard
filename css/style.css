@@ -144,7 +144,8 @@ h1, h2, h3 { font-family: 'Manrope', sans-serif; }
 .form-hint { margin: -8px 0 14px; color: #687581; font-size: 12px; }
 .assignment-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; padding: 18px 22px; }
 .assignment-controls .dialog-label { margin: 0; }
-.assignment-controls .button { flex-basis: 100%; width: fit-content; margin-top: 4px; }
+.assignment-field { display: flex; min-width: 150px; flex-direction: column; align-items: flex-start; gap: 7px; }
+.assignment-field .dialog-label { text-align: left; }
 .assignment-controls input,
 .assignment-controls select { min-width: 150px; height: 40px; padding: 0 10px; border: 1px solid #e2e7eb; border-radius: 7px; color: #303943; background: #fff; font: inherit; }
 .assignment-message { margin: 0 22px 12px; }
@@ -296,6 +297,7 @@ tbody tr:last-child td { border-bottom: 0; }
   .search-box input { width: 100%; }
   .table-toolbar .button { padding: 0 8px; font-size: 11px; }
   .assignment-controls { align-items: stretch; flex-direction: column; padding: 16px; }
+  .assignment-field { width: 100%; }
   .assignment-controls input,
   .assignment-controls select { width: 100%; }
   .assignment-message,

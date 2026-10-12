@@ -219,6 +219,13 @@
     });
     tbody.innerHTML = rows.length ? rows.join('')
       : '<tr><td class="table-empty" colspan="3">Belum ada penugasan untuk tanggal ini.</td></tr>';
+    const message = document.getElementById('assignment-message');
+    if (message) {
+      message.textContent = !data.mentor.length ? 'Tambahkan mentor terlebih dahulu di halaman Data Mentor.'
+        : !availableStudents.length ? ''
+          : !activeMentors.length ? 'Semua mentor telah mencapai batas murid untuk tanggal ini.' : '';
+      message.hidden = !message.textContent;
+    }
   }
 
   function getMonthlyMentorEarnings(mentorId, monthKey) {
