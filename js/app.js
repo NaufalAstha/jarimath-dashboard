@@ -361,6 +361,7 @@
     if (!student || !dialog || !documentElement) return;
     const due = new Date(dueDate + 'T00:00:00');
     const period = new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(due);
+    const issueDate = new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date());
     const invoiceNumber = 'JK-' + dueDate.slice(0, 7).replace('-', '') + '-'
       + String(student.id).replace(/[^a-z0-9]/gi, '').slice(-6).toUpperCase();
     const settings = data.pengaturan[0];
@@ -369,7 +370,7 @@
     documentElement.innerHTML = '<header class="invoice-brand"><strong>Jarimath Kids</strong>'
       + '<span>Invoice Pembayaran SPP</span></header><div class="invoice-title">INVOICE LES · PERIODE '
       + escapeHTML(period.toLocaleUpperCase('id')) + '</div><div class="invoice-meta"><p><b>No. Invoice</b><span>'
-      + escapeHTML(invoiceNumber) + '</span></p><p><b>Tanggal</b><span>' + escapeHTML(dueDate) + '</span></p>'
+      + escapeHTML(invoiceNumber) + '</span></p><p><b>Tanggal dibuat</b><span>' + escapeHTML(issueDate) + '</span></p>'
       + '<p><b>Nama Siswa</b><span>' + escapeHTML(student.nama) + '</span></p><p><b>Program</b><span>'
       + escapeHTML(student.program || '') + '</span></p></div><table class="invoice-items"><thead><tr>'
       + '<th>Program yang diikuti</th><th>Qty</th><th>Harga</th><th>Total</th></tr></thead><tbody><tr><td>'
@@ -385,9 +386,11 @@
       + '\nProgram: ' + (student.program || '-') + '\nTotal: ' + formatCurrency(student.spp)
       + '\nJatuh tempo: ' + dueDate + (paymentDetail ? '\nPembayaran: ' + paymentDetail : '');
     const whatsappButton = document.getElementById('invoice-whatsapp-button');
-    whatsappButton.href = phone ? 'https://wa.me/' + phone.replace(/\D/g, '') + '?text=' + encodeURIComponent(message) : '#';
-    whatsappButton.setAttribute('aria-disabled', phone ? 'false' : 'true');
-    whatsappButton.title = phone ? 'Buka WhatsApp dengan detail invoice' : 'Nomor telepon orang tua tidak valid';
+    if (whatsappButton) {
+      whatsappButton.href = phone ? 'https://wa.me/' + phone.replace(/\D/g, '') + '?text=' + encodeURIComponent(message) : '#';
+      whatsappButton.setAttribute('aria-disabled', phone ? 'false' : 'true');
+      whatsappButton.title = phone ? 'Buka WhatsApp dengan detail invoice' : 'Nomor telepon orang tua tidak valid';
+    }
     dialog.showModal();
   }
 
@@ -399,76 +402,72 @@
     invoiceDialog.addEventListener('click', function (event) {
       if (event.target === invoiceDialog) invoiceDialog.close();
     });
-    document.getElementById('invoice-print-button').addEventListener('click', function () {
+    async function downloadInvoice(format) {
+      const invoiceDocument = document.getElementById('invoice-document');
+      const button = format === 'pdf' ? document.getElementById('invoice-download-pdf-button') : document.getElementById('invoice-download-image-button');
+      if (!invoiceDocument || !button || !window.html2canvas) return;
+      const label = button.textContent;
+      button.disabled = true;
+      button.textContent = 'Menyiapkan...';
+      try {
+        const canvas = await window.html2canvas(invoiceDocument, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+        const filename = 'invoice-jarimath-' + new Date().toISOString().slice(0, 10);
+        if (format === 'image') {
+          const link = document.createElement('a');
+          link.href = canvas.toDataURL('image/png');
+          link.download = filename + '.png';
+          link.click();
+        } else {
+          if (!window.jspdf || !window.jspdf.jsPDF) throw new Error('Library PDF tidak berhasil dimuat.');
+          const pdf = new window.jspdf.jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+          const width = pdf.internal.pageSize.getWidth();
+          const height = canvas.height * width / canvas.width;
+          pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, width, height);
+          pdf.save(filename + '.pdf');
+        }
+      } catch (error) {
+        dashboardMessage.textContent = 'Invoice tidak dapat diunduh: ' + error.message;
+      } finally {
+        button.disabled = false;
+        button.textContent = label;
+      }
+    }
+    const printButton = document.getElementById('invoice-print-button');
+    if (printButton) printButton.addEventListener('click', function () {
       document.body.classList.add('printing-invoice');
       window.print();
       window.setTimeout(function () { document.body.classList.remove('printing-invoice'); }, 500);
     });
+    const imageButton = document.getElementById('invoice-download-image-button');
+    const pdfButton = document.getElementById('invoice-download-pdf-button');
+    if (imageButton) imageButton.addEventListener('click', function () { downloadInvoice('image'); });
+    if (pdfButton) pdfButton.addEventListener('click', function () { downloadInvoice('pdf'); });
   }
 
-  const invoicePaymentSettingsForm = document.getElementById('invoice-payment-settings-form');
-  if (invoicePaymentSettingsForm) {
-    const settings = data.pengaturan[0];
-    document.getElementById('invoice-bank-name').value = settings.nama_rekening;
-    document.getElementById('invoice-account-number').value = settings.nomor_rekening;
-    document.getElementById('invoice-account-holder').value = settings.nama_pemilik_rekening;
-    const preview = document.getElementById('invoice-qris-preview');
-    if (settings.qris_image) {
-      preview.src = settings.qris_image;
-      preview.hidden = false;
-    }
-    invoicePaymentSettingsForm.addEventListener('submit', async function (event) {
+  const invoiceCreatorDialog = document.getElementById('invoice-creator-dialog');
+  const invoiceCreatorForm = document.getElementById('invoice-creator-form');
+  const openInvoiceCreator = document.getElementById('open-invoice-creator');
+  if (invoiceCreatorDialog && invoiceCreatorForm && openInvoiceCreator) {
+    const studentSelect = document.getElementById('invoice-student-select');
+    const creatorMessage = document.getElementById('invoice-creator-message');
+    openInvoiceCreator.addEventListener('click', function () {
+      const students = data.siswa.filter(function (student) { return student.status === 'Aktif'; });
+      studentSelect.innerHTML = '<option value="">Pilih siswa</option>' + students.map(function (student) {
+        return '<option value="' + escapeHTML(student.id) + '">' + escapeHTML(student.nama) + '</option>';
+      }).join('');
+      creatorMessage.textContent = students.length ? '' : 'Belum ada siswa aktif yang dapat dibuatkan invoice.';
+      invoiceCreatorDialog.showModal();
+    });
+    invoiceCreatorDialog.querySelectorAll('[data-close-invoice-creator]').forEach(function (button) {
+      button.addEventListener('click', function () { invoiceCreatorDialog.close(); });
+    });
+    invoiceCreatorForm.addEventListener('submit', function (event) {
       event.preventDefault();
-      const values = {
-        id: 'global',
-        tanggal_bayar: Number(data.pengaturan[0].tanggal_bayar) || 5,
-        nama_rekening: document.getElementById('invoice-bank-name').value.trim(),
-        nomor_rekening: document.getElementById('invoice-account-number').value.trim(),
-        nama_pemilik_rekening: document.getElementById('invoice-account-holder').value.trim(),
-        qris_image: data.pengaturan[0].qris_image || ''
-      };
-      const file = document.getElementById('invoice-qris-image').files[0];
-      if (file) {
-        if (!file.type.startsWith('image/') || file.size > 1024 * 1024) {
-          dashboardMessage.textContent = 'Gambar QRIS harus berupa file gambar maksimal 1 MB.';
-          return;
-        }
-        try {
-          values.qris_image = await new Promise(function (resolve, reject) {
-            const reader = new FileReader();
-            reader.onload = function () { resolve(String(reader.result)); };
-            reader.onerror = function () { reject(new Error('Gagal membaca file gambar QRIS.')); };
-            reader.readAsDataURL(file);
-          });
-        } catch (error) {
-          dashboardMessage.textContent = error.message;
-          return;
-        }
-      }
-      const button = invoicePaymentSettingsForm.querySelector('[type="submit"]');
-      button.disabled = true;
-      try {
-        if (isDemoMode) {
-          data.pengaturan[0] = values;
-          saveData('pengaturan');
-        } else {
-          const result = await authClient.from('pengaturan').upsert(values, { onConflict: 'id' }).select('*').single();
-          if (result.error) throw new Error(result.error.message);
-          data.pengaturan[0] = result.data;
-        }
-        if (values.qris_image) {
-          preview.src = values.qris_image;
-          preview.hidden = false;
-        }
-        dashboardMessage.textContent = 'Informasi pembayaran invoice berhasil disimpan.';
-      } catch (error) {
-        dashboardMessage.textContent = 'Tidak dapat menyimpan informasi pembayaran: ' + error.message;
-      } finally {
-        button.disabled = false;
-      }
+      if (!studentSelect.value) return;
+      invoiceCreatorDialog.close();
+      openStudentInvoice(studentSelect.value, formatDateKey(new Date()));
     });
   }
-
   async function generateDueMentorPayments() {
     const todayKey = formatDateKey(new Date());
     const globalPaymentDay = Number(data.pengaturan[0].tanggal_bayar) || 5;

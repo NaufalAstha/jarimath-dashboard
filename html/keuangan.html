@@ -86,22 +86,10 @@
           <section class="content-card">
             <div class="section-heading">
               <div>
-                <h2>Informasi pembayaran invoice</h2>
-                <p class="muted">Informasi ini dicantumkan pada invoice SPP yang dibuat dari Dashboard.</p>
+                <h2>Buat invoice SPP</h2>
               </div>
             </div>
-            <form id="invoice-payment-settings-form" class="invoice-settings-form">
-              <label class="dialog-label" for="invoice-bank-name">Nama bank / metode pembayaran</label>
-              <input id="invoice-bank-name" name="nama_rekening" type="text" placeholder="Contoh: Bank BCA atau QRIS">
-              <label class="dialog-label" for="invoice-account-number">Nomor rekening</label>
-              <input id="invoice-account-number" name="nomor_rekening" type="text" placeholder="Nomor rekening">
-              <label class="dialog-label" for="invoice-account-holder">Nama pemilik rekening</label>
-              <input id="invoice-account-holder" name="nama_pemilik_rekening" type="text" placeholder="Nama pemilik rekening">
-              <label class="dialog-label" for="invoice-qris-image">Gambar QRIS</label>
-              <input id="invoice-qris-image" name="qris_image" type="file" accept="image/*">
-              <img id="invoice-qris-preview" class="qris-preview" alt="Pratinjau QRIS" hidden>
-              <button class="button button-primary" type="submit">Simpan informasi pembayaran</button>
-            </form>
+            <div class="invoice-generator-action"><button id="open-invoice-creator" class="button button-primary" type="button">Buat invoice</button></div>
           </section>
           <section class="content-card">
             <div class="section-heading table-heading">
@@ -136,7 +124,12 @@
     </form>
   </dialog>
 
+
+  <dialog id="invoice-creator-dialog" class="data-dialog invoice-creator-dialog"><form id="invoice-creator-form"><div class="dialog-heading"><div><p class="eyebrow">INVOICE SPP</p><h2>Buat invoice siswa</h2></div><button class="dialog-close" type="button" data-close-invoice-creator aria-label="Tutup">&times;</button></div><div class="dialog-fields"><label class="dialog-label" for="invoice-student-select">Nama siswa</label><select id="invoice-student-select" required><option value="">Pilih siswa</option></select></div><p id="invoice-creator-message" class="form-message" role="alert" aria-live="polite"></p><div class="dialog-actions"><button class="button button-outline" type="button" data-close-invoice-creator>Batal</button><button class="button button-primary" type="submit">Tampilkan invoice</button></div></form></dialog>
+  <dialog id="invoice-dialog" class="invoice-dialog"><div class="invoice-actions"><button class="button button-outline" type="button" data-close-invoice>Tutup</button><button id="invoice-download-image-button" class="button button-outline" type="button">Unduh gambar</button><button id="invoice-download-pdf-button" class="button button-primary" type="button">Unduh PDF</button></div><article id="invoice-document" class="invoice-document"></article></dialog>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script src="../js/config.js"></script>
   <script src="../js/supabase-client.js"></script>
   <script src="../js/app.js"></script>
