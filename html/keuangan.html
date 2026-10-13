@@ -84,6 +84,26 @@
             </div>
           </section>
           <section class="content-card">
+            <div class="section-heading">
+              <div>
+                <h2>Informasi pembayaran invoice</h2>
+                <p class="muted">Informasi ini dicantumkan pada invoice SPP yang dibuat dari Dashboard.</p>
+              </div>
+            </div>
+            <form id="invoice-payment-settings-form" class="invoice-settings-form">
+              <label class="dialog-label" for="invoice-bank-name">Nama bank / metode pembayaran</label>
+              <input id="invoice-bank-name" name="nama_rekening" type="text" placeholder="Contoh: Bank BCA atau QRIS">
+              <label class="dialog-label" for="invoice-account-number">Nomor rekening</label>
+              <input id="invoice-account-number" name="nomor_rekening" type="text" placeholder="Nomor rekening">
+              <label class="dialog-label" for="invoice-account-holder">Nama pemilik rekening</label>
+              <input id="invoice-account-holder" name="nama_pemilik_rekening" type="text" placeholder="Nama pemilik rekening">
+              <label class="dialog-label" for="invoice-qris-image">Gambar QRIS</label>
+              <input id="invoice-qris-image" name="qris_image" type="file" accept="image/*">
+              <img id="invoice-qris-preview" class="qris-preview" alt="Pratinjau QRIS" hidden>
+              <button class="button button-primary" type="submit">Simpan informasi pembayaran</button>
+            </form>
+          </section>
+          <section class="content-card">
             <div class="section-heading table-heading">
               <div><h2>Biaya tetap bulanan</h2><p class="muted" id="fixed-cost-result-count">Biaya dihitung otomatis setiap bulan sejak tanggal mulai.</p></div>
               <button class="button button-primary" type="button" data-action="add" data-collection="biaya_tetap">+ Tambah biaya tetap</button>

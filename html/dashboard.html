@@ -76,11 +76,12 @@
               <p class="metric-note">Pemasukan dikurangi pengeluaran</p>
             </article>
           </section>
+          <div class="dashboard-panels">
           <section class="content-card">
             <div class="section-heading">
               <div>
                 <h2>Penugasan mentor hari ini</h2>
-                <p class="muted">Tentukan mentor untuk siswa pada tanggal tertentu. Kapasitas dihitung per hari.</p>
+                <p class="muted">Tentukan mentor untuk siswa pada tanggal tertentu. Kapasitas dihitung dari murid yang diajar bersamaan.</p>
               </div>
             </div>
             <div class="assignment-controls">
@@ -88,24 +89,30 @@
                 <label class="dialog-label" for="assignment-date">Tanggal</label>
                 <input id="assignment-date" type="date">
               </div>
-              <div class="assignment-field">
-                <label class="dialog-label" for="assignment-student">Siswa</label>
-                <select id="assignment-student"></select>
-              </div>
-              <div class="assignment-field">
-                <label class="dialog-label" for="assignment-mentor">Mentor</label>
-                <select id="assignment-mentor"></select>
-              </div>
-              <button id="assign-student-button" class="button button-primary" type="button" data-action="assign-student">Tetapkan mentor</button>
             </div>
             <p id="assignment-message" class="dashboard-message assignment-message" role="status" aria-live="polite"></p>
             <div class="table-wrap">
               <table id="assignment-table">
-                <thead><tr><th>Siswa</th><th>Mentor</th><th>Aksi</th></tr></thead>
+                <thead><tr><th>Siswa</th><th>Jadwal</th><th>Mentor</th><th>Kehadiran</th><th>Aksi</th></tr></thead>
                 <tbody></tbody>
               </table>
             </div>
           </section>
+          <section id="invoice-alerts-card" class="content-card">
+            <div class="section-heading">
+              <div>
+                <h2>Pengingat invoice SPP</h2>
+                <p class="muted">Pengingat muncul tiga hari sebelum tanggal bergabung bulanan siswa.</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table id="invoice-alerts-table">
+                <thead><tr><th>Siswa</th><th>Jatuh tempo</th><th>Program</th><th>Jumlah</th><th>Aksi</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+          </div>
           <section class="content-card chart-card" aria-labelledby="dashboard-chart-title">
             <div class="section-heading chart-heading">
               <div>
@@ -173,6 +180,15 @@
         <button class="button button-primary" type="submit">Simpan</button>
       </div>
     </form>
+  </dialog>
+
+  <dialog id="invoice-dialog" class="invoice-dialog">
+    <div class="invoice-actions">
+      <button class="button button-outline" type="button" data-close-invoice>Tutup</button>
+      <button id="invoice-print-button" class="button button-outline" type="button">Cetak / Simpan PDF</button>
+      <a id="invoice-whatsapp-button" class="button button-primary" target="_blank" rel="noopener">Kirim via WhatsApp</a>
+    </div>
+    <article id="invoice-document" class="invoice-document"></article>
   </dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

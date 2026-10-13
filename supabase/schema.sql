@@ -54,6 +54,17 @@ alter table public.siswa add column if not exists usia integer;
 alter table public.siswa add column if not exists program_id uuid;
 alter table public.siswa add column if not exists program text;
 alter table public.siswa add column if not exists spp numeric(14, 2);
+alter table public.siswa add column if not exists tanggal_bergabung date;
+alter table public.siswa add column if not exists hari_les_1 smallint;
+alter table public.siswa add column if not exists jam_les_1 time;
+alter table public.siswa add column if not exists hari_les_2 smallint;
+alter table public.siswa add column if not exists jam_les_2 time;
+alter table public.siswa drop constraint if exists siswa_jadwal_hari_check;
+alter table public.siswa add constraint siswa_jadwal_hari_check check (
+  (hari_les_1 is null or hari_les_1 between 0 and 6)
+  and (hari_les_2 is null or hari_les_2 between 0 and 6)
+  and (hari_les_1 is null or hari_les_2 is null or hari_les_1 <> hari_les_2)
+);
 alter table public.siswa alter column kelas drop not null;
 alter table public.mentor add column if not exists telepon text;
 alter table public.mentor alter column keahlian drop not null;
@@ -75,6 +86,7 @@ on conflict (nama) do nothing;
 create table if not exists public.penugasan_mentor (
   id uuid primary key default gen_random_uuid(),
   tanggal date not null,
+  jam_mulai time,
   mentor_id uuid not null references public.mentor(id) on delete restrict,
   siswa_id uuid not null references public.siswa(id) on delete restrict,
   created_at timestamptz not null default now(),
@@ -87,8 +99,17 @@ create index if not exists penugasan_mentor_mentor_tanggal_idx
 create table if not exists public.pengaturan (
   id text primary key,
   tanggal_bayar smallint not null default 5 check (tanggal_bayar between 1 and 31),
+  nama_rekening text not null default '',
+  nomor_rekening text not null default '',
+  nama_pemilik_rekening text not null default '',
+  qris_image text not null default '',
   created_at timestamptz not null default now()
 );
+
+alter table public.pengaturan add column if not exists nama_rekening text not null default '';
+alter table public.pengaturan add column if not exists nomor_rekening text not null default '';
+alter table public.pengaturan add column if not exists nama_pemilik_rekening text not null default '';
+alter table public.pengaturan add column if not exists qris_image text not null default '';
 
 insert into public.pengaturan (id, tanggal_bayar)
 values ('global', 5)
@@ -107,6 +128,9 @@ create table if not exists public.pembayaran_mentor (
   unique (mentor_id, periode)
 );
 
+alter table public.penugasan_mentor add column if not exists hadir_at timestamptz;
+alter table public.penugasan_mentor add column if not exists jam_mulai time;
+
 create or replace function public.enforce_mentor_daily_capacity()
 returns trigger
 language plpgsql
@@ -114,6 +138,9 @@ as $$
 declare
   max_students integer;
   current_count integer;
+  candidate_start timestamp;
+  candidate_end timestamp;
+  check_time timestamp;
 begin
   select kapasitas_murid into max_students
   from public.mentor
@@ -124,15 +151,37 @@ begin
     raise exception 'Mentor tidak ditemukan.';
   end if;
 
-  select count(*) into current_count
-  from public.penugasan_mentor
-  where mentor_id = new.mentor_id
-    and tanggal = new.tanggal
-    and id is distinct from new.id;
-
-  if current_count >= max_students then
-    raise exception 'Mentor sudah mencapai batas maksimal murid pada tanggal tersebut.';
+  if new.jam_mulai is null then
+    raise exception 'Jam mulai les harus diisi untuk memvalidasi kapasitas mentor.';
   end if;
+
+  candidate_start := new.tanggal + new.jam_mulai;
+  candidate_end := candidate_start + interval '60 minutes';
+  for check_time in
+    select candidate_start
+    union
+    select (assignment.tanggal + assignment.jam_mulai)::timestamp
+    from public.penugasan_mentor assignment
+    where assignment.mentor_id = new.mentor_id
+      and assignment.tanggal = new.tanggal
+      and assignment.id is distinct from new.id
+      and assignment.jam_mulai is not null
+      and assignment.tanggal + assignment.jam_mulai > candidate_start
+      and assignment.tanggal + assignment.jam_mulai < candidate_end
+  loop
+    select count(*) into current_count
+    from public.penugasan_mentor assignment
+    where assignment.mentor_id = new.mentor_id
+      and assignment.tanggal = new.tanggal
+      and assignment.id is distinct from new.id
+      and assignment.jam_mulai is not null
+      and assignment.tanggal + assignment.jam_mulai <= check_time
+      and assignment.tanggal + assignment.jam_mulai + interval '60 minutes' > check_time;
+
+    if current_count + 1 > max_students then
+      raise exception 'Mentor sudah mencapai batas maksimal murid yang bersamaan pada jam tersebut.';
+    end if;
+  end loop;
 
   return new;
 end;

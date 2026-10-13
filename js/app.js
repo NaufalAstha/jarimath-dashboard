@@ -21,9 +21,9 @@
   };
   const initialData = {
     siswa: [
-      { id: 's-1', nama: 'Alya Putri', asal_sekolah: 'SD Nusantara', usia: 8, telepon_orang_tua: '081234567890', nama_orang_tua: 'Budi Putra', program_id: 'p-1', program: 'Matematika dasar', spp: 350000, status: 'Aktif' },
-      { id: 's-2', nama: 'Rafi Pratama', asal_sekolah: 'SD Merdeka', usia: 7, telepon_orang_tua: '081298765432', nama_orang_tua: 'Siti Pratama', program_id: 'p-2', program: 'Berhitung ceria', spp: 350000, status: 'Aktif' },
-      { id: 's-3', nama: 'Nadia Zahra', asal_sekolah: 'SD Harapan', usia: 9, telepon_orang_tua: '081234567891', nama_orang_tua: 'Dewi Zahra', program_id: 'p-1', program: 'Matematika dasar', spp: 350000, status: 'Menunggu' }
+      { id: 's-1', nama: 'Alya Putri', asal_sekolah: 'SD Nusantara', usia: 8, telepon_orang_tua: '081234567890', nama_orang_tua: 'Budi Putra', program_id: 'p-1', program: 'Matematika dasar', spp: 350000, tanggal_bergabung: '2026-10-15', hari_les_1: 2, jam_les_1: '14:00', hari_les_2: 5, jam_les_2: '14:00', status: 'Aktif' },
+      { id: 's-2', nama: 'Rafi Pratama', asal_sekolah: 'SD Merdeka', usia: 7, telepon_orang_tua: '081298765432', nama_orang_tua: 'Siti Pratama', program_id: 'p-2', program: 'Berhitung ceria', spp: 350000, tanggal_bergabung: '2026-10-20', hari_les_1: 1, jam_les_1: '15:00', hari_les_2: 4, jam_les_2: '15:00', status: 'Aktif' },
+      { id: 's-3', nama: 'Nadia Zahra', asal_sekolah: 'SD Harapan', usia: 9, telepon_orang_tua: '081234567891', nama_orang_tua: 'Dewi Zahra', program_id: 'p-1', program: 'Matematika dasar', spp: 350000, tanggal_bergabung: '2026-10-12', hari_les_1: 3, jam_les_1: '16:00', hari_les_2: 6, jam_les_2: '16:00', status: 'Menunggu' }
     ],
     mentor: [
       { id: 'm-1', nama: 'Kak Dinda', telepon: '081234567892', kapasitas_murid: 4, tarif_per_anak: 0, tanggal_bayar: null },
@@ -41,7 +41,10 @@
     biaya_tetap: [],
     penugasan_mentor: [],
     pembayaran_mentor: [],
-    pengaturan: [{ id: 'global', tanggal_bayar: 5 }]
+    pengaturan: [{
+      id: 'global', tanggal_bayar: 5, nama_rekening: '', nomor_rekening: '',
+      nama_pemilik_rekening: '', qris_image: ''
+    }]
   };
   let storageWarning = false;
   let data = loadData();
@@ -58,6 +61,9 @@
   });
   if (!data.pengaturan.length) data.pengaturan.push({ id: 'global', tanggal_bayar: 5 });
   if (!Number.isInteger(Number(data.pengaturan[0].tanggal_bayar))) data.pengaturan[0].tanggal_bayar = 5;
+  ['nama_rekening', 'nomor_rekening', 'nama_pemilik_rekening', 'qris_image'].forEach(function (key) {
+    if (data.pengaturan[0][key] == null) data.pengaturan[0][key] = '';
+  });
 
   const currentYear = document.querySelector('[data-current-year]');
   if (currentYear) currentYear.textContent = new Date().getFullYear();
@@ -183,65 +189,284 @@
 
   function renderDailyAssignments() {
     const dateInput = document.getElementById('assignment-date');
-    const mentorSelect = document.getElementById('assignment-mentor');
-    const studentSelect = document.getElementById('assignment-student');
     const tbody = document.querySelector('#assignment-table tbody');
-    if (!dateInput || !mentorSelect || !studentSelect || !tbody) return;
+    if (!dateInput || !tbody) return;
     if (!dateInput.value) dateInput.value = formatDateKey(new Date());
     const date = dateInput.value;
     dateInput.min = formatDateKey(new Date());
-    const assigned = data.penugasan_mentor.filter(function (assignment) { return assignment.tanggal === date; });
-    const activeMentors = data.mentor.filter(function (mentor) {
-      const assignedCount = assigned.filter(function (assignment) { return assignment.mentor_id === mentor.id; }).length;
-      return assignedCount < Number(mentor.kapasitas_murid || 0);
+    const dayOfWeek = new Date(date + 'T12:00:00').getDay();
+    const scheduledStudents = data.siswa.filter(function (student) {
+      return student.status === 'Aktif'
+        && student.tanggal_bergabung
+        && student.tanggal_bergabung <= date
+        && (Number(student.hari_les_1) === dayOfWeek || Number(student.hari_les_2) === dayOfWeek);
     });
-    const previousMentorId = mentorSelect.value;
-    mentorSelect.innerHTML = activeMentors.map(function (mentor) {
-      const count = assigned.filter(function (assignment) { return assignment.mentor_id === mentor.id; }).length;
-      return '<option value="' + escapeHTML(mentor.id) + '"' + (mentor.id === previousMentorId ? ' selected' : '') + '>'
-        + escapeHTML(mentor.nama) + ' (' + count + '/' + Number(mentor.kapasitas_murid) + ')</option>';
-    }).join('');
-    const assignedStudentIds = assigned.map(function (assignment) { return assignment.siswa_id; });
-    const availableStudents = data.siswa.filter(function (student) {
-      return student.status === 'Aktif' && assignedStudentIds.indexOf(student.id) === -1;
-    });
-    studentSelect.innerHTML = availableStudents.map(function (student) {
-      return '<option value="' + escapeHTML(student.id) + '">' + escapeHTML(student.nama) + '</option>';
-    }).join('');
-    const button = document.getElementById('assign-student-button');
-    if (button) button.disabled = !activeMentors.length || !availableStudents.length;
-    const rows = assigned.map(function (assignment) {
-      const mentor = data.mentor.find(function (item) { return item.id === assignment.mentor_id; });
-      const student = data.siswa.find(function (item) { return item.id === assignment.siswa_id; });
-      return '<tr><td>' + escapeHTML(student ? student.nama : 'Siswa dihapus') + '</td><td>'
-        + escapeHTML(mentor ? mentor.nama : 'Mentor dihapus') + '</td><td class="table-actions"><button class="text-button text-danger"'
-        + ' type="button" data-action="remove-assignment" data-id="' + escapeHTML(assignment.id) + '">Hapus</button></td></tr>';
+    const rows = scheduledStudents.map(function (student) {
+      const slot = Number(student.hari_les_1) === dayOfWeek ? 1 : 2;
+      const startTime = student['jam_les_' + slot] || '00:00';
+      const assignment = data.penugasan_mentor.find(function (item) {
+        return item.tanggal === date && item.siswa_id === student.id;
+      });
+      const mentor = assignment && data.mentor.find(function (item) { return item.id === assignment.mentor_id; });
+      const scheduledEnd = getLessonEnd(date, startTime);
+      const attendanceEnd = assignment && assignment.hadir_at
+        ? new Date(new Date(assignment.hadir_at).getTime() + 60 * 60 * 1000) : scheduledEnd;
+      const completed = Boolean(assignment && assignment.hadir_at) && Date.now() >= attendanceEnd.getTime();
+      const mentorOptions = getAvailableMentors(date, assignment && assignment.mentor_id, startTime, assignment && assignment.id)
+        .map(function (item) {
+          return '<option value="' + escapeHTML(item.id) + '"' + (mentor && item.id === mentor.id ? ' selected' : '') + '>'
+            + escapeHTML(item.nama) + '</option>';
+        }).join('');
+      const mentorCell = assignment
+        ? escapeHTML(mentor ? mentor.nama : 'Mentor dihapus')
+        : '<div class="assignment-mentor-picker"><select aria-label="Pilih mentor untuk ' + escapeHTML(student.nama)
+          + '" data-assignment-mentor="' + escapeHTML(student.id) + '">' + mentorOptions + '</select>'
+          + '<button class="text-button" type="button" data-action="assign-student-row" data-student-id="'
+          + escapeHTML(student.id) + '"' + (!mentorOptions ? ' disabled' : '') + '>Tetapkan</button></div>';
+      const attendanceCell = !assignment ? 'Belum ditetapkan'
+        : completed ? '<span class="status-pill status-active">Hadir · selesai</span>'
+          : assignment.hadir_at ? '<span class="status-pill status-pending">Hadir · selesai ' + escapeHTML(formatTime(attendanceEnd)) + '</span>'
+            : '<button class="text-button" type="button" data-action="mark-attendance" data-id="'
+              + escapeHTML(assignment.id) + '" data-start="' + escapeHTML(startTime) + '">Absen hadir</button>';
+      const actionCell = assignment ? '<button class="text-button text-danger" type="button" data-action="remove-assignment"'
+        + ' data-id="' + escapeHTML(assignment.id) + '">Hapus</button>' : '—';
+      return '<tr><td>' + escapeHTML(student.nama) + '</td><td>' + escapeHTML(startTime) + '–'
+        + escapeHTML(formatTime(scheduledEnd)) + '</td><td>' + mentorCell + '</td><td>' + attendanceCell
+        + '</td><td class="table-actions">' + actionCell + '</td></tr>';
     });
     tbody.innerHTML = rows.length ? rows.join('')
-      : '<tr><td class="table-empty" colspan="3">Belum ada penugasan untuk tanggal ini.</td></tr>';
+      : '<tr><td class="table-empty" colspan="5">Tidak ada siswa terjadwal untuk tanggal ini.</td></tr>';
     const message = document.getElementById('assignment-message');
     if (message) {
-      message.textContent = !data.mentor.length ? 'Tambahkan mentor terlebih dahulu di halaman Data Mentor.'
-        : !availableStudents.length ? ''
-          : !activeMentors.length ? 'Semua mentor telah mencapai batas murid untuk tanggal ini.' : '';
+      const hasUnassignedStudents = scheduledStudents.some(function (student) {
+        const alreadyAssigned = data.penugasan_mentor.some(function (assignment) {
+          return assignment.tanggal === date && assignment.siswa_id === student.id;
+        });
+        const slot = Number(student.hari_les_1) === dayOfWeek ? 1 : 2;
+        return !alreadyAssigned && getAvailableMentors(date, null, student['jam_les_' + slot] || '00:00').length > 0;
+      });
+      const unassigned = scheduledStudents.some(function (student) {
+        return !data.penugasan_mentor.some(function (assignment) {
+          return assignment.tanggal === date && assignment.siswa_id === student.id;
+        });
+      });
+      message.textContent = unassigned && !hasUnassignedStudents
+        ? 'Semua mentor telah mencapai batas murid pada jam les tersebut.' : '';
       message.hidden = !message.textContent;
     }
+    renderInvoiceAlerts();
+  }
+
+  function getAvailableMentors(date, includeMentorId, startTime, excludeAssignmentId) {
+    return data.mentor.filter(function (mentor) {
+      return canAssignMentor(date, startTime || '00:00', mentor.id, excludeAssignmentId)
+        || mentor.id === includeMentorId;
+    });
+  }
+
+  function canAssignMentor(date, startTime, mentorId, excludeAssignmentId, capacityOverride) {
+    const mentor = data.mentor.find(function (item) { return item.id === mentorId; });
+    if (!mentor) return false;
+    const events = [];
+    data.penugasan_mentor.filter(function (assignment) {
+      return assignment.tanggal === date && assignment.mentor_id === mentorId && assignment.id !== excludeAssignmentId;
+    }).forEach(function (assignment) {
+      const start = new Date(date + 'T' + (assignment.jam_mulai || '00:00') + ':00').getTime();
+      events.push({ time: start, delta: 1 }, { time: start + 60 * 60 * 1000, delta: -1 });
+    });
+    const proposedStart = new Date(date + 'T' + startTime + ':00').getTime();
+    events.push({ time: proposedStart, delta: 1 }, { time: proposedStart + 60 * 60 * 1000, delta: -1 });
+    events.sort(function (left, right) { return left.time - right.time || left.delta - right.delta; });
+    let concurrent = 0;
+    let maximum = 0;
+    events.forEach(function (entry) {
+      concurrent += entry.delta;
+      maximum = Math.max(maximum, concurrent);
+    });
+    return maximum <= Number(capacityOverride == null ? mentor.kapasitas_murid : capacityOverride);
+  }
+
+  function getLessonEnd(date, startTime) {
+    const parts = startTime.split(':').map(Number);
+    const end = new Date(date + 'T00:00:00');
+    end.setHours(parts[0] || 0, parts[1] || 0, 0, 0);
+    end.setMinutes(end.getMinutes() + 60);
+    return end;
+  }
+
+  function formatTime(date) {
+    return String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0');
+  }
+
+  function weekdayName(day) {
+    return ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][day];
+  }
+
+  function getCompletedSessions(mentorId, monthKey) {
+    return data.penugasan_mentor.filter(function (assignment) {
+      const student = data.siswa.find(function (item) { return item.id === assignment.siswa_id; });
+      if (assignment.mentor_id !== mentorId || !assignment.hadir_at || !student
+        || String(assignment.tanggal).slice(0, 7) !== monthKey) return false;
+      return Date.now() >= new Date(assignment.hadir_at).getTime() + 60 * 60 * 1000;
+    });
   }
 
   function getMonthlyMentorEarnings(mentorId, monthKey) {
-    const students = new Set(data.penugasan_mentor.filter(function (assignment) {
-      return assignment.mentor_id === mentorId && String(assignment.tanggal).slice(0, 7) === monthKey
-        && assignment.tanggal <= formatDateKey(new Date());
-    }).map(function (assignment) { return assignment.siswa_id; }));
     const mentor = data.mentor.find(function (item) { return item.id === mentorId; });
-    return students.size * Number(mentor ? mentor.tarif_per_anak : 0);
+    return getCompletedStudentCount(mentorId, monthKey)
+      * Number(mentor ? mentor.tarif_per_anak : 0);
   }
 
-  function getMonthlyStudentCount(mentorId, monthKey) {
-    return new Set(data.penugasan_mentor.filter(function (assignment) {
-      return assignment.mentor_id === mentorId && String(assignment.tanggal).slice(0, 7) === monthKey
-        && assignment.tanggal <= formatDateKey(new Date());
-    }).map(function (assignment) { return assignment.siswa_id; })).size;
+  function getCompletedStudentCount(mentorId, monthKey) {
+    return new Set(getCompletedSessions(mentorId, monthKey).map(function (assignment) {
+      return assignment.siswa_id;
+    })).size;
+  }
+
+  function renderInvoiceAlerts() {
+    const tbody = document.querySelector('#invoice-alerts-table tbody');
+    if (!tbody) return;
+    const today = new Date();
+    const todayKey = formatDateKey(today);
+    const alerts = data.siswa.filter(function (student) {
+      return student.status === 'Aktif' && student.tanggal_bergabung;
+    }).map(function (student) {
+      const joinDate = new Date(student.tanggal_bergabung + 'T00:00:00');
+      if (Number.isNaN(joinDate.getTime())) return null;
+      const dueDay = joinDate.getDate();
+      const currentMonthLastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+      const useCurrentMonth = today.getDate() <= Math.min(dueDay, currentMonthLastDay);
+      const dueDate = useCurrentMonth
+        ? new Date(today.getFullYear(), today.getMonth(), Math.min(dueDay, currentMonthLastDay))
+        : new Date(today.getFullYear(), today.getMonth() + 1,
+          Math.min(dueDay, new Date(today.getFullYear(), today.getMonth() + 2, 0).getDate()));
+      const daysUntil = Math.round((dueDate.getTime() - new Date(todayKey + 'T00:00:00').getTime()) / 86400000);
+      return daysUntil >= 0 && daysUntil <= 3
+        ? { student: student, dueDate: formatDateKey(dueDate), daysUntil: daysUntil } : null;
+    }).filter(Boolean);
+    tbody.innerHTML = alerts.length ? alerts.map(function (alert) {
+      const student = alert.student;
+      const countdown = alert.daysUntil === 0 ? ' · jatuh tempo hari ini' : ' · ' + alert.daysUntil + ' hari lagi';
+      return '<tr><td>' + escapeHTML(student.nama + countdown) + '</td><td>' + escapeHTML(alert.dueDate) + '</td><td>'
+        + escapeHTML(student.program || '') + '</td><td>' + escapeHTML(formatCurrency(student.spp)) + '</td>'
+        + '<td><button class="text-button" type="button" data-action="create-invoice" data-student-id="'
+        + escapeHTML(student.id) + '" data-due-date="' + escapeHTML(alert.dueDate) + '">Buat invoice</button></td></tr>';
+    }).join('') : '<tr><td class="table-empty" colspan="5">Tidak ada invoice yang mendekati jatuh tempo.</td></tr>';
+  }
+
+  function openStudentInvoice(studentId, dueDate) {
+    const student = data.siswa.find(function (item) { return item.id === studentId; });
+    const dialog = document.getElementById('invoice-dialog');
+    const documentElement = document.getElementById('invoice-document');
+    if (!student || !dialog || !documentElement) return;
+    const due = new Date(dueDate + 'T00:00:00');
+    const period = new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(due);
+    const invoiceNumber = 'JK-' + dueDate.slice(0, 7).replace('-', '') + '-'
+      + String(student.id).replace(/[^a-z0-9]/gi, '').slice(-6).toUpperCase();
+    const settings = data.pengaturan[0];
+    const paymentDetail = [settings.nama_rekening, settings.nomor_rekening, settings.nama_pemilik_rekening]
+      .filter(Boolean).join(' · ');
+    documentElement.innerHTML = '<header class="invoice-brand"><strong>Jarimath Kids</strong>'
+      + '<span>Invoice Pembayaran SPP</span></header><div class="invoice-title">INVOICE LES · PERIODE '
+      + escapeHTML(period.toLocaleUpperCase('id')) + '</div><div class="invoice-meta"><p><b>No. Invoice</b><span>'
+      + escapeHTML(invoiceNumber) + '</span></p><p><b>Tanggal</b><span>' + escapeHTML(dueDate) + '</span></p>'
+      + '<p><b>Nama Siswa</b><span>' + escapeHTML(student.nama) + '</span></p><p><b>Program</b><span>'
+      + escapeHTML(student.program || '') + '</span></p></div><table class="invoice-items"><thead><tr>'
+      + '<th>Program yang diikuti</th><th>Qty</th><th>Harga</th><th>Total</th></tr></thead><tbody><tr><td>'
+      + escapeHTML(student.program || '') + '</td><td>1 bulan</td><td>' + escapeHTML(formatCurrency(student.spp))
+      + '</td><td>' + escapeHTML(formatCurrency(student.spp)) + '</td></tr></tbody><tfoot><tr><th colspan="3">Total yang harus dibayar</th><th>'
+      + escapeHTML(formatCurrency(student.spp)) + '</th></tr></tfoot></table><section class="invoice-payment"><b>Pembayaran</b>'
+      + '<p>' + escapeHTML(paymentDetail || settings.nama_rekening || 'Informasi pembayaran belum diatur.')
+      + '</p>' + (settings.qris_image ? '<img src="' + escapeHTML(settings.qris_image) + '" alt="QRIS Jarimath Kids">' : '')
+      + '</section>';
+    const phone = normalizeIndonesianPhone(student.telepon_orang_tua);
+    const message = 'Halo ' + (student.nama_orang_tua || 'Orang Tua') + ', berikut invoice SPP Jarimath Kids.\n'
+      + 'No. Invoice: ' + invoiceNumber + '\nPeriode: ' + period + '\nNama siswa: ' + student.nama
+      + '\nProgram: ' + (student.program || '-') + '\nTotal: ' + formatCurrency(student.spp)
+      + '\nJatuh tempo: ' + dueDate + (paymentDetail ? '\nPembayaran: ' + paymentDetail : '');
+    const whatsappButton = document.getElementById('invoice-whatsapp-button');
+    whatsappButton.href = phone ? 'https://wa.me/' + phone.replace(/\D/g, '') + '?text=' + encodeURIComponent(message) : '#';
+    whatsappButton.setAttribute('aria-disabled', phone ? 'false' : 'true');
+    whatsappButton.title = phone ? 'Buka WhatsApp dengan detail invoice' : 'Nomor telepon orang tua tidak valid';
+    dialog.showModal();
+  }
+
+  const invoiceDialog = document.getElementById('invoice-dialog');
+  if (invoiceDialog) {
+    invoiceDialog.querySelectorAll('[data-close-invoice]').forEach(function (button) {
+      button.addEventListener('click', function () { invoiceDialog.close(); });
+    });
+    invoiceDialog.addEventListener('click', function (event) {
+      if (event.target === invoiceDialog) invoiceDialog.close();
+    });
+    document.getElementById('invoice-print-button').addEventListener('click', function () {
+      document.body.classList.add('printing-invoice');
+      window.print();
+      window.setTimeout(function () { document.body.classList.remove('printing-invoice'); }, 500);
+    });
+  }
+
+  const invoicePaymentSettingsForm = document.getElementById('invoice-payment-settings-form');
+  if (invoicePaymentSettingsForm) {
+    const settings = data.pengaturan[0];
+    document.getElementById('invoice-bank-name').value = settings.nama_rekening;
+    document.getElementById('invoice-account-number').value = settings.nomor_rekening;
+    document.getElementById('invoice-account-holder').value = settings.nama_pemilik_rekening;
+    const preview = document.getElementById('invoice-qris-preview');
+    if (settings.qris_image) {
+      preview.src = settings.qris_image;
+      preview.hidden = false;
+    }
+    invoicePaymentSettingsForm.addEventListener('submit', async function (event) {
+      event.preventDefault();
+      const values = {
+        id: 'global',
+        tanggal_bayar: Number(data.pengaturan[0].tanggal_bayar) || 5,
+        nama_rekening: document.getElementById('invoice-bank-name').value.trim(),
+        nomor_rekening: document.getElementById('invoice-account-number').value.trim(),
+        nama_pemilik_rekening: document.getElementById('invoice-account-holder').value.trim(),
+        qris_image: data.pengaturan[0].qris_image || ''
+      };
+      const file = document.getElementById('invoice-qris-image').files[0];
+      if (file) {
+        if (!file.type.startsWith('image/') || file.size > 1024 * 1024) {
+          dashboardMessage.textContent = 'Gambar QRIS harus berupa file gambar maksimal 1 MB.';
+          return;
+        }
+        try {
+          values.qris_image = await new Promise(function (resolve, reject) {
+            const reader = new FileReader();
+            reader.onload = function () { resolve(String(reader.result)); };
+            reader.onerror = function () { reject(new Error('Gagal membaca file gambar QRIS.')); };
+            reader.readAsDataURL(file);
+          });
+        } catch (error) {
+          dashboardMessage.textContent = error.message;
+          return;
+        }
+      }
+      const button = invoicePaymentSettingsForm.querySelector('[type="submit"]');
+      button.disabled = true;
+      try {
+        if (isDemoMode) {
+          data.pengaturan[0] = values;
+          saveData('pengaturan');
+        } else {
+          const result = await authClient.from('pengaturan').upsert(values, { onConflict: 'id' }).select('*').single();
+          if (result.error) throw new Error(result.error.message);
+          data.pengaturan[0] = result.data;
+        }
+        if (values.qris_image) {
+          preview.src = values.qris_image;
+          preview.hidden = false;
+        }
+        dashboardMessage.textContent = 'Informasi pembayaran invoice berhasil disimpan.';
+      } catch (error) {
+        dashboardMessage.textContent = 'Tidak dapat menyimpan informasi pembayaran: ' + error.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
   }
 
   async function generateDueMentorPayments() {
@@ -249,7 +474,7 @@
     const globalPaymentDay = Number(data.pengaturan[0].tanggal_bayar) || 5;
     const periods = {};
     data.penugasan_mentor.forEach(function (assignment) {
-      if (!assignment.tanggal || assignment.tanggal > todayKey) return;
+      if (!assignment.tanggal || assignment.tanggal > todayKey || !assignment.hadir_at) return;
       const monthKey = String(assignment.tanggal).slice(0, 7);
       if (!periods[assignment.mentor_id]) periods[assignment.mentor_id] = {};
       periods[assignment.mentor_id][monthKey] = true;
@@ -263,10 +488,8 @@
         const paymentDate = new Date(payoutMonth.getFullYear(), payoutMonth.getMonth(),
           Math.min(paymentDay, new Date(payoutMonth.getFullYear(), payoutMonth.getMonth() + 1, 0).getDate()));
         const paymentDateKey = formatDateKey(paymentDate);
-        if (paymentDateKey > todayKey || data.pembayaran_mentor.some(function (payment) {
-          return payment.mentor_id === mentor.id && payment.periode === monthKey + '-01';
-        })) continue;
-        const studentCount = getMonthlyStudentCount(mentor.id, monthKey);
+        if (paymentDateKey > todayKey) continue;
+        const studentCount = getCompletedStudentCount(mentor.id, monthKey);
         const amount = studentCount * Number(mentor.tarif_per_anak || 0);
         if (!studentCount || !amount) continue;
         const values = {
@@ -278,17 +501,27 @@
           jumlah: amount,
           tanggal_bayar: paymentDateKey
         };
+        const existingPayment = data.pembayaran_mentor.find(function (payment) {
+          return payment.mentor_id === mentor.id && payment.periode === monthKey + '-01';
+        });
+        if (existingPayment && Number(existingPayment.jumlah_siswa) === studentCount
+          && Number(existingPayment.jumlah) === amount && existingPayment.tanggal_bayar === paymentDateKey) continue;
         if (isDemoMode) {
-          values.id = 'mentor-pay-' + mentor.id + '-' + monthKey;
+          values.id = existingPayment ? existingPayment.id : 'mentor-pay-' + mentor.id + '-' + monthKey;
           values.created_at = paymentDateKey + 'T12:00:00';
-          data.pembayaran_mentor.push(values);
+          if (existingPayment) Object.assign(existingPayment, values);
+          else data.pembayaran_mentor.push(values);
           saveData('pembayaran_mentor');
         } else {
           const result = await authClient.from('pembayaran_mentor')
-            .upsert(values, { onConflict: 'mentor_id,periode', ignoreDuplicates: true })
-            .select('*');
+            .upsert(values, { onConflict: 'mentor_id,periode' })
+            .select('*').single();
           if (result.error) throw new Error('Tidak dapat mencatat pembayaran mentor: ' + result.error.message);
-          if (result.data && result.data.length) data.pembayaran_mentor.push(result.data[0]);
+          const existingIndex = data.pembayaran_mentor.findIndex(function (payment) {
+            return payment.mentor_id === mentor.id && payment.periode === monthKey + '-01';
+          });
+          if (existingIndex === -1) data.pembayaran_mentor.push(result.data);
+          else data.pembayaran_mentor[existingIndex] = result.data;
         }
       }
     }
@@ -607,7 +840,8 @@
     const columns = collection === 'siswa'
       ? [['nama', 'Nama'], ['usia', 'Usia'], ['asal_sekolah', 'Asal sekolah'],
         ['nama_orang_tua', 'Nama orang tua'], ['telepon_orang_tua', 'Telepon orang tua'],
-        ['program', 'Program'], ['spp', 'SPP/bulan'], ['status', 'Status']]
+        ['program', 'Program'], ['spp', 'SPP/bulan'], ['tanggal_bergabung', 'Tanggal bergabung'],
+        ['jadwal', 'Jadwal les'], ['status', 'Status']]
       : collection === 'mentor'
         ? [['nama', 'Nama'], ['telepon', 'Nomor telepon'],
           ['pendapatan', 'Pendapatan bulan ini']]
@@ -623,6 +857,14 @@
     const query = (search ? search.value : '').trim().toLocaleLowerCase('id');
     function getColumnValue(item, columnName) {
       let value = item[columnName];
+      if (collection === 'siswa' && columnName === 'jadwal') {
+        value = [1, 2].map(function (slot) {
+          const day = item['hari_les_' + slot];
+          const time = item['jam_les_' + slot];
+          return Number.isInteger(Number(day)) && time
+            ? weekdayName(Number(day)) + ' ' + time : '';
+        }).filter(Boolean).join(' · ');
+      }
       if (collection === 'mentor' && columnName === 'pendapatan') {
         value = getMonthlyMentorEarnings(item.id, formatDateKey(new Date()).slice(0, 7));
         return formatCurrency(value);
@@ -709,6 +951,11 @@
         ['nama_orang_tua', 'Nama orang tua', 'text', item && item.nama_orang_tua],
         ['telepon_orang_tua', 'Nomor telepon orang tua', 'tel', item && item.telepon_orang_tua],
         ['program_id', 'Program yang diikuti', 'program', item && (item.program_id || (matchingProgram && matchingProgram.id))],
+        ['tanggal_bergabung', 'Tanggal bergabung', 'date', item && item.tanggal_bergabung],
+        ['hari_les_1', 'Hari les pertama', 'weekday', item ? item.hari_les_1 == null ? 1 : item.hari_les_1 : 1],
+        ['jam_les_1', 'Jam mulai les pertama', 'time', item ? item.jam_les_1 || '14:00' : '14:00'],
+        ['hari_les_2', 'Hari les kedua', 'weekday', item ? item.hari_les_2 == null ? 4 : item.hari_les_2 : 4],
+        ['jam_les_2', 'Jam mulai les kedua', 'time', item ? item.jam_les_2 || '14:00' : '14:00'],
         ['status', 'Status', 'select', item && item.status]
       ]
       : collection === 'mentor'
@@ -718,7 +965,7 @@
         ]
         : collection === 'mentor_settings'
           ? [
-            ['kapasitas_murid', 'Maksimal murid yang diajar per hari', 'number', item && item.kapasitas_murid],
+            ['kapasitas_murid', 'Maksimal murid yang diajar bersamaan', 'number', item && item.kapasitas_murid],
             ['tarif_per_anak', 'Tarif per anak per bulan (rupiah)', 'number', item && item.tarif_per_anak],
             ['tanggal_bayar', 'Tanggal bayar khusus (kosong = default global)', 'number', item && item.tanggal_bayar]
           ]
@@ -745,14 +992,15 @@
         : collection === 'program' ? 'program' : collection === 'biaya_tetap' ? 'biaya tetap' : 'transaksi');
     dialogFields.innerHTML = fields.map(function (field) {
       const value = field[3] == null ? '' : String(field[3]);
-      if (field[2] === 'select' || field[2] === 'transaction' || field[2] === 'program') {
+      if (field[2] === 'select' || field[2] === 'transaction' || field[2] === 'program' || field[2] === 'weekday') {
         const options = field[2] === 'select' ? ['Aktif', 'Menunggu']
           : field[2] === 'transaction' ? ['Pemasukan', 'Pengeluaran']
+            : field[2] === 'weekday' ? [0, 1, 2, 3, 4, 5, 6].map(String)
             : data.program.map(function (program) { return program.id; });
         const optionLabels = field[2] === 'program'
           ? data.program.map(function (program) {
             return program.nama + ' — SPP ' + formatCurrency(program.spp);
-          }) : options;
+          }) : field[2] === 'weekday' ? options.map(function (day) { return weekdayName(Number(day)); }) : options;
         return '<label class="dialog-label" for="field-' + field[0] + '">' + field[1] + '</label><select required id="field-'
           + field[0] + '" name="' + field[0] + '">' + options.map(function (option, index) {
             return '<option value="' + escapeHTML(option) + '"' + (value === option ? ' selected' : '') + '>'
@@ -767,6 +1015,7 @@
         + field[0] + '" name="' + field[0] + '" type="' + field[2] + '" value="' + escapeHTML(value) + '"'
         + (field[2] === 'number' ? ' min="' + numericMin + '"' + (numericMax ? ' max="' + numericMax + '"' : '') + ' step="1"' : '')
         + (field[2] === 'date' ? ' max="9999-12-31"' : '')
+        + (field[2] === 'time' ? ' step="1800"' : '')
         + (field[2] === 'tel' ? ' inputmode="tel" autocomplete="tel" maxlength="20" title="Masukkan nomor Indonesia yang valid, misalnya 081234567890 atau +6281234567890"' : '')
         + '>';
     }).join('');
@@ -787,6 +1036,9 @@
     }
     if (collection === 'keuangan' && !item) {
       document.getElementById('field-tanggal').value = formatDateKey(new Date());
+    }
+    if (collection === 'siswa' && !item) {
+      document.getElementById('field-tanggal_bergabung').value = formatDateKey(new Date());
     }
     if (collection === 'biaya_tetap' && !item) {
       document.getElementById('field-tanggal_mulai').value = formatDateKey(new Date());
@@ -832,12 +1084,21 @@
     if (!button) return;
     const action = button.dataset.action;
     const collection = button.dataset.collection || currentView;
-    if (action === 'assign-student') {
-      assignStudentForDate();
-      return;
-    }
     if (action === 'remove-assignment') {
       removeStudentAssignment(button.dataset.id);
+      return;
+    }
+    if (action === 'assign-student-row') {
+      assignStudentForDate(button.dataset.studentId,
+        button.closest('tr').querySelector('[data-assignment-mentor]').value, button);
+      return;
+    }
+    if (action === 'mark-attendance') {
+      markStudentAttendance(button.dataset.id, button.dataset.start);
+      return;
+    }
+    if (action === 'create-invoice') {
+      openStudentInvoice(button.dataset.studentId, button.dataset.dueDate);
       return;
     }
     if (action === 'add') {
@@ -879,10 +1140,8 @@
     }
   });
 
-  async function assignStudentForDate() {
+  async function assignStudentForDate(studentId, mentorId, button) {
     const date = document.getElementById('assignment-date').value;
-    const mentorId = document.getElementById('assignment-mentor').value;
-    const studentId = document.getElementById('assignment-student').value;
     const message = document.getElementById('assignment-message');
     const mentor = data.mentor.find(function (item) { return item.id === mentorId; });
     const student = data.siswa.find(function (item) { return item.id === studentId; });
@@ -890,7 +1149,6 @@
       message.textContent = 'Pilih tanggal, mentor, dan siswa sebelum membuat penugasan.';
       return;
     }
-    const assignedToday = data.penugasan_mentor.filter(function (item) { return item.tanggal === date; });
     if (date < formatDateKey(new Date())) {
       message.textContent = 'Penugasan baru hanya dapat dibuat untuk hari ini atau tanggal mendatang.';
       return;
@@ -899,18 +1157,18 @@
       message.textContent = 'Siswa sudah mendapat mentor pada tanggal tersebut.';
       return;
     }
-    const mentorAssignmentCount = assignedToday.filter(function (item) { return item.mentor_id === mentorId; }).length;
-    if (mentorAssignmentCount >= Number(mentor.kapasitas_murid)) {
-      message.textContent = 'Mentor sudah mencapai batas maksimal murid untuk tanggal tersebut.';
-      return;
-    }
     const assignment = {
       tanggal: date,
       mentor_id: mentorId,
-      siswa_id: studentId
+      siswa_id: studentId,
+      jam_mulai: Number(student.hari_les_1) === new Date(date + 'T12:00:00').getDay()
+        ? student.jam_les_1 : student.jam_les_2
     };
-    const button = document.getElementById('assign-student-button');
-    button.disabled = true;
+    if (!canAssignMentor(date, assignment.jam_mulai, mentorId)) {
+      message.textContent = 'Mentor sudah mencapai batas maksimal siswa pada jam tersebut.';
+      return;
+    }
+    if (button) button.disabled = true;
     message.textContent = '';
     try {
       if (isDemoMode) {
@@ -927,7 +1185,36 @@
       message.textContent = 'Tidak dapat menyimpan penugasan: ' + error.message;
       dashboardMessage.textContent = message.textContent;
     } finally {
-      button.disabled = false;
+      if (button) button.disabled = false;
+    }
+  }
+
+  async function markStudentAttendance(id, startTime) {
+    const assignment = data.penugasan_mentor.find(function (item) { return item.id === id; });
+    if (!assignment) return;
+    const start = new Date(assignment.tanggal + 'T' + startTime + ':00');
+    if (Date.now() < start.getTime()) {
+      dashboardMessage.textContent = 'Absensi bisa dilakukan mulai jam les yang dijadwalkan (' + startTime + ').';
+      return;
+    }
+    const values = Object.assign({}, assignment, { hadir_at: new Date().toISOString() });
+    try {
+      if (isDemoMode) {
+        data.penugasan_mentor = data.penugasan_mentor.map(function (item) {
+          return item.id === id ? values : item;
+        });
+        saveData('penugasan_mentor');
+      } else {
+        const saved = await saveRemoteRecord('penugasan_mentor', id, { hadir_at: values.hadir_at });
+        data.penugasan_mentor = data.penugasan_mentor.map(function (item) {
+          return item.id === id ? saved : item;
+        });
+      }
+      await generateDueMentorPayments();
+      renderView();
+      dashboardMessage.textContent = 'Kehadiran tercatat. Pendapatan mentor bertambah setelah sesi 60 menit selesai.';
+    } catch (error) {
+      dashboardMessage.textContent = 'Tidak dapat mencatat kehadiran: ' + error.message;
     }
   }
 
@@ -958,7 +1245,7 @@
         dashboardMessage.textContent = 'Tanggal pembayaran harus berupa angka antara 1 sampai 31.';
         return;
       }
-      const settings = { id: 'global', tanggal_bayar: day };
+      const settings = Object.assign({}, data.pengaturan[0], { id: 'global', tanggal_bayar: day });
       const button = paymentSettingsForm.querySelector('[type="submit"]');
       button.disabled = true;
       dashboardMessage.textContent = '';
@@ -1009,9 +1296,15 @@
     }
     if (collection === 'siswa') {
       values.usia = Number(values.usia);
+      values.hari_les_1 = Number(values.hari_les_1);
+      values.hari_les_2 = Number(values.hari_les_2);
+      if (values.hari_les_1 === values.hari_les_2) {
+        formMessage.textContent = 'Pilih dua hari les yang berbeda.';
+        return;
+      }
       const selectedProgram = data.program.find(function (program) { return program.id === values.program_id; });
-      if (!selectedProgram) {
-        formMessage.textContent = 'Pilih program yang tersedia sebelum menyimpan data siswa.';
+      if (!selectedProgram || !values.tanggal_bergabung || !values.jam_les_1 || !values.jam_les_2) {
+        formMessage.textContent = 'Lengkapi tanggal bergabung, dua jadwal les, dan program siswa.';
         return;
       }
       values.program = selectedProgram.nama;
@@ -1030,13 +1323,18 @@
         formMessage.textContent = 'Periksa kembali kapasitas, tarif, dan tanggal pembayaran mentor.';
         return;
       }
-      const dailyCounts = {};
-      data.penugasan_mentor.filter(function (assignment) { return assignment.mentor_id === editing.id; })
-        .forEach(function (assignment) {
-          dailyCounts[assignment.tanggal] = (dailyCounts[assignment.tanggal] || 0) + 1;
+      const dates = new Set(data.penugasan_mentor.filter(function (assignment) {
+        return assignment.mentor_id === editing.id;
+      }).map(function (assignment) { return assignment.tanggal; }));
+      if (Array.from(dates).some(function (date) {
+        const starts = data.penugasan_mentor.filter(function (assignment) {
+          return assignment.tanggal === date && assignment.mentor_id === editing.id && assignment.jam_mulai;
         });
-      if (Object.keys(dailyCounts).some(function (date) { return dailyCounts[date] > values.kapasitas_murid; })) {
-        formMessage.textContent = 'Batas murid tidak boleh lebih kecil dari penugasan yang sudah terdaftar.';
+        return starts.some(function (assignment) {
+          return !canAssignMentor(date, assignment.jam_mulai, editing.id, assignment.id, values.kapasitas_murid);
+        });
+      })) {
+        formMessage.textContent = 'Batas siswa tidak boleh lebih kecil dari jumlah penugasan yang bersamaan.';
         return;
       }
     }
@@ -1189,6 +1487,16 @@
       returnToLogin(error.message || 'Tidak dapat memulai koneksi Supabase.');
     }
   }
+
+  window.setInterval(async function () {
+    if (currentView !== 'dashboard' || document.hidden) return;
+    try {
+      await generateDueMentorPayments();
+      renderView();
+    } catch (error) {
+      dashboardMessage.textContent = 'Tidak dapat memperbarui pendapatan mentor: ' + error.message;
+    }
+  }, 30000);
 
   logoutButton.addEventListener('click', async function () {
     let demoMode;
