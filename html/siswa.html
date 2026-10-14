@@ -12,11 +12,12 @@
 <body data-page="siswa">
   <div class="dashboard-shell">
     <aside class="sidebar">
+      <button class="mobile-menu-button" type="button" data-mobile-menu aria-expanded="false" aria-controls="main-navigation" aria-label="Buka menu navigasi"><span></span><span></span><span></span></button>
       <a class="brand" href="dashboard.html" aria-label="Jarimath Kids">
         <span class="brand-name">jarimath<span> kids</span></span>
       </a>
       <p class="nav-label">MENU UTAMA</p>
-      <nav aria-label="Menu utama">
+      <nav id="main-navigation" aria-label="Menu utama">
         <a class="nav-item" href="dashboard.html">Dashboard</a>
         <a class="nav-item nav-item-active" href="siswa.html" aria-current="page">Data Siswa</a>
         <a class="nav-item" href="mentor.html">Data Mentor</a>
@@ -100,6 +101,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/config.js"></script>
+  <script src="../js/config.local.js"></script>
   <script src="../js/supabase-client.js"></script>
   <script src="../js/app.js"></script>
 </body>

@@ -1,4 +1,22 @@
 (function () {
+  const menuButton = document.querySelector('[data-mobile-menu]');
+  const sidebar = document.querySelector('.sidebar');
+  if (menuButton && sidebar) {
+    const closeMenu = function () {
+      sidebar.classList.remove('is-open');
+      menuButton.setAttribute('aria-expanded', 'false');
+    };
+    menuButton.addEventListener('click', function () {
+      const isOpen = sidebar.classList.toggle('is-open');
+      menuButton.setAttribute('aria-expanded', String(isOpen));
+    });
+    sidebar.querySelectorAll('nav a').forEach(function (link) {
+      link.addEventListener('click', closeMenu);
+    });
+    document.addEventListener('click', function (event) {
+      if (sidebar.classList.contains('is-open') && !sidebar.contains(event.target)) closeMenu();
+    });
+  }
   const logoutButton = document.getElementById('logout-button');
   const dashboardMessage = document.getElementById('dashboard-message');
   const accountEmail = document.getElementById('account-email');

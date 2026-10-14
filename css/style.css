@@ -484,4 +484,47 @@ tbody tr:last-child td { border-bottom: 0; }
   .dashboard-shell .dialog-fields select { min-height: 44px; margin-bottom: 13px; }
   .dashboard-shell .dialog-actions { gap: 8px; }
   .dashboard-shell .dialog-actions .button { min-height: 44px; }
+
+  .dashboard-shell .sidebar { position: relative; z-index: 20; }
+  .dashboard-shell .mobile-menu-button {
+    display: grid;
+    position: absolute;
+    top: 13px;
+    right: 16px;
+    width: 42px;
+    height: 42px;
+    place-content: center;
+    gap: 5px;
+    border: 1px solid #e1e7eb;
+    border-radius: 9px;
+    color: #263440;
+    background: #fff;
+  }
+  .dashboard-shell .mobile-menu-button span { display: block; width: 19px; height: 2px; border-radius: 2px; background: currentColor; }
+  .dashboard-shell .sidebar .brand { margin-right: 52px; }
+  .dashboard-shell .sidebar nav {
+    display: none;
+    position: absolute;
+    top: 69px;
+    left: 12px;
+    right: 12px;
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding: 8px;
+    border: 1px solid #e5eaee;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 14px 35px rgba(30, 45, 58, .14);
+  }
+  .dashboard-shell .sidebar.is-open nav { display: grid; }
+  .dashboard-shell .sidebar.is-open .mobile-menu-button { background: #eef2f5; }
+  .dashboard-shell .sidebar.is-open::after {
+    content: '';
+    position: fixed;
+    z-index: -1;
+    inset: 0;
+    background: rgba(28, 38, 48, .16);
+  }
 }
+
+.mobile-menu-button { display: none; }
