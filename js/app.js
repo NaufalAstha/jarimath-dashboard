@@ -145,6 +145,31 @@
     }
   }
 
+  // Hapus relasi terlebih dahulu karena tabel Supabase memakai ON DELETE RESTRICT.
+  async function deleteRecordWithDependencies(collection, id) {
+    const dependencies = collection === 'mentor'
+      ? [['penugasan_mentor', 'mentor_id'], ['pembayaran_mentor', 'mentor_id']]
+      : collection === 'siswa' ? [['penugasan_mentor', 'siswa_id']] : [];
+    if (isDemoMode) {
+      dependencies.forEach(function (dependency) {
+        const key = dependency[0];
+        data[key] = data[key].filter(function (record) { return record[dependency[1]] !== id; });
+        saveData(key);
+      });
+      data[collection] = data[collection].filter(function (record) { return record.id !== id; });
+      saveData(collection);
+      return;
+    }
+    for (const dependency of dependencies) {
+      const result = await authClient.from(dependency[0]).delete().eq(dependency[1], id);
+      if (result.error) throw new Error(result.error.message);
+    }
+    await deleteRemoteRecord(collection, id);
+    data[collection] = data[collection].filter(function (record) { return record.id !== id; });
+    dependencies.forEach(function (dependency) {
+      data[dependency[0]] = data[dependency[0]].filter(function (record) { return record[dependency[1]] !== id; });
+    });
+  }
   function escapeHTML(value) {
     return String(value).replace(/[&<>"']/g, function (character) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character];
@@ -1123,13 +1148,7 @@
       dashboardMessage.textContent = '';
       (async function () {
         try {
-          if (isDemoMode) {
-            data[collection] = data[collection].filter(function (record) { return record.id !== item.id; });
-            saveData(collection);
-          } else {
-            await deleteRemoteRecord(collection, item.id);
-            data[collection] = data[collection].filter(function (record) { return record.id !== item.id; });
-          }
+          await deleteRecordWithDependencies(collection, item.id);
           renderView();
         } catch (error) {
           dashboardMessage.textContent = 'Tidak dapat menghapus data: ' + error.message;

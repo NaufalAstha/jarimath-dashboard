@@ -396,3 +396,19 @@ tbody tr:last-child td { border-bottom: 0; }
   .dashboard-shell th,
   .dashboard-shell td { padding: 13px 16px; }
 }
+
+/* Mobile refinements */
+@media (max-width: 480px) {
+  .dashboard-shell .welcome-row { align-items: flex-start; flex-direction: column; }
+  .dashboard-shell .date-chip { max-width: 100%; }
+  .dashboard-shell .section-heading { flex-direction: column; }
+  .dashboard-shell .section-heading > div,
+  .dashboard-shell .table-toolbar { width: 100%; }
+  .dashboard-shell .table-toolbar { grid-template-columns: 1fr; }
+  .dashboard-shell .table-toolbar .button { width: 100%; }
+  .dashboard-shell .table-wrap { margin: 0; }
+  .dashboard-shell th, .dashboard-shell td { padding: 11px 12px; }
+  .dashboard-shell .text-button { min-height: 32px; padding: 7px 5px; }
+  .dashboard-shell .dialog-actions { flex-direction: column-reverse; }
+  .dashboard-shell .dialog-actions .button { width: 100%; }
+}
