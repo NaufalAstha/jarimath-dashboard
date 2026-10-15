@@ -5,19 +5,21 @@
     const closeMenu = function () {
       sidebar.classList.remove('is-open');
       menuButton.setAttribute('aria-expanded', 'false');
+      menuButton.setAttribute('aria-label', 'Buka menu navigasi');
     };
     menuButton.addEventListener('click', function () {
       const isOpen = sidebar.classList.toggle('is-open');
       menuButton.setAttribute('aria-expanded', String(isOpen));
+      menuButton.setAttribute('aria-label', isOpen ? 'Tutup menu navigasi' : 'Buka menu navigasi');
     });
     sidebar.querySelectorAll('nav a').forEach(function (link) {
       link.addEventListener('click', closeMenu);
     });
     document.addEventListener('click', function (event) {
-      if (sidebar.classList.contains('is-open') && !sidebar.contains(event.target)) closeMenu();
+      if (sidebar.classList.contains('is-open') && !sidebar.contains(event.target) && !menuButton.contains(event.target)) closeMenu();
     });
   }
-  const logoutButton = document.getElementById('logout-button');
+  const logoutButtons = document.querySelectorAll('[data-logout]');
   const dashboardMessage = document.getElementById('dashboard-message');
   const accountEmail = document.getElementById('account-email');
   const viewContainer = document.getElementById('view-container');
@@ -25,6 +27,14 @@
   const dataForm = document.getElementById('data-form');
   const dialogFields = document.getElementById('dialog-fields');
   const formMessage = document.getElementById('form-message');
+  document.querySelectorAll('.mobile-search-toggle').forEach(function (button) {
+    button.addEventListener('click', function () {
+      const toolbar = button.closest('.table-toolbar');
+      const isOpen = toolbar.classList.toggle('is-search-open');
+      button.setAttribute('aria-expanded', String(isOpen));
+      if (isOpen) toolbar.querySelector('#table-search').focus();
+    });
+  });
   const demoModeKey = 'jarimath-demo-mode';
   const loginMessageKey = 'jarimath-login-message';
   const storageKeys = {
@@ -1534,37 +1544,39 @@
     }
   }, 30000);
 
-  logoutButton.addEventListener('click', async function () {
-    let demoMode;
-    try {
-      demoMode = sessionStorage.getItem(demoModeKey) === 'true';
-    } catch (error) {
-      dashboardMessage.textContent = 'Tidak dapat membaca status sesi browser: ' + error.message;
-      return;
-    }
-    if (demoMode) {
-      returnToLogin('');
-      return;
-    }
-    if (!authClient) {
-      dashboardMessage.textContent = 'Sesi autentikasi belum siap. Muat ulang halaman lalu coba lagi.';
-      return;
-    }
-
-    logoutButton.disabled = true;
-    dashboardMessage.textContent = '';
-    try {
-      const { error } = await authClient.auth.signOut();
-      if (error) {
-        dashboardMessage.textContent = 'Tidak dapat keluar: ' + error.message;
-      } else {
-        returnToLogin('');
+  logoutButtons.forEach(function (logoutButton) {
+    logoutButton.addEventListener('click', async function () {
+      let demoMode;
+      try {
+        demoMode = sessionStorage.getItem(demoModeKey) === 'true';
+      } catch (error) {
+        dashboardMessage.textContent = 'Tidak dapat membaca status sesi browser: ' + error.message;
+        return;
       }
-    } catch (error) {
-      dashboardMessage.textContent = 'Tidak dapat keluar: ' + (error.message || 'Periksa koneksi internet.');
-    } finally {
-      logoutButton.disabled = false;
-    }
+      if (demoMode) {
+        returnToLogin('');
+        return;
+      }
+      if (!authClient) {
+        dashboardMessage.textContent = 'Sesi autentikasi belum siap. Muat ulang halaman lalu coba lagi.';
+        return;
+      }
+
+      logoutButtons.forEach(function (button) { button.disabled = true; });
+      dashboardMessage.textContent = '';
+      try {
+        const { error } = await authClient.auth.signOut();
+        if (error) {
+          dashboardMessage.textContent = 'Tidak dapat keluar: ' + error.message;
+        } else {
+          returnToLogin('');
+        }
+      } catch (error) {
+        dashboardMessage.textContent = 'Tidak dapat keluar: ' + (error.message || 'Periksa koneksi internet.');
+      } finally {
+        logoutButtons.forEach(function (button) { button.disabled = false; });
+      }
+    });
   });
 
   initializeAuth();

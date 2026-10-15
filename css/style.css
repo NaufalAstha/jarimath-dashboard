@@ -528,3 +528,67 @@ tbody tr:last-child td { border-bottom: 0; }
 }
 
 .mobile-menu-button { display: none; }
+
+/* Smartphone navigation and compact data toolbars. */
+.sidebar-logout-button { display: none; }
+.mobile-search-toggle { display: none; }
+
+@media (max-width: 620px) {
+  .dashboard-shell .topbar { position: relative; z-index: 10; }
+  .dashboard-shell .topbar .mobile-menu-button {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-content: center;
+    gap: 5px;
+    border: 1px solid #e1e7eb;
+    border-radius: 9px;
+    color: #263440;
+    background: #fff;
+  }
+  .dashboard-shell .topbar .mobile-menu-button span { display: block; width: 19px; height: 2px; border-radius: 2px; background: currentColor; }
+  .dashboard-shell .account-area #logout-button { display: none; }
+  .dashboard-shell .sidebar {
+    width: min(82vw, 300px);
+    position: fixed;
+    inset: 0 auto 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 24px 16px 18px;
+    border-right: 1px solid #e5eaee;
+    border-bottom: 0;
+    box-shadow: 14px 0 35px rgba(30, 45, 58, .14);
+    transform: translateX(-105%);
+    transition: transform .2s ease;
+  }
+  .dashboard-shell .sidebar.is-open { transform: translateX(0); }
+  .dashboard-shell .sidebar .brand { margin: 0 0 26px; }
+  .dashboard-shell .sidebar .nav-label { display: block; margin: 0 8px 10px; }
+  .dashboard-shell .sidebar nav {
+    position: static;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 4px;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .dashboard-shell .sidebar .nav-item { justify-content: flex-start; min-height: 43px; padding: 0 11px; border: 0; text-align: left; }
+  .dashboard-shell .sidebar-bottom { display: block; margin-top: auto; }
+  .dashboard-shell .sidebar-logout-button { display: inline-flex; width: 100%; min-height: 42px; }
+  .dashboard-shell .sidebar .mobile-menu-button { display: none; }
+
+  .dashboard-shell .data-toolbar-heading { align-items: flex-start; }
+  .dashboard-shell .data-toolbar-heading .table-toolbar { position: relative; display: flex; flex-wrap: nowrap; width: auto; margin-left: auto; }
+  .dashboard-shell .data-toolbar-heading .table-toolbar .button { width: auto; min-height: 40px; white-space: nowrap; }
+  .dashboard-shell .data-toolbar-heading .mobile-search-toggle { width: 40px; min-width: 40px; min-height: 40px; display: inline-grid; place-items: center; padding: 0; border: 1px solid #e2e7eb; border-radius: 7px; color: #455766; background: #fff; font-size: 24px; line-height: 1; }
+  .dashboard-shell .data-toolbar-heading .search-box { display: none; }
+  .dashboard-shell .data-toolbar-heading .table-toolbar.is-search-open { flex-wrap: wrap; padding-bottom: 48px; }
+  .dashboard-shell .data-toolbar-heading .table-toolbar.is-search-open .search-box { position: absolute; right: 0; bottom: 0; display: block; width: 100%; }
+  .dashboard-shell .data-toolbar-heading .table-toolbar.is-search-open .search-box input { width: 100%; }
+
+  .dashboard-shell #program-table .table-actions { position: static; }
+}

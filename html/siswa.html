@@ -12,7 +12,6 @@
 <body data-page="siswa">
   <div class="dashboard-shell">
     <aside class="sidebar">
-      <button class="mobile-menu-button" type="button" data-mobile-menu aria-expanded="false" aria-controls="main-navigation" aria-label="Buka menu navigasi"><span></span><span></span><span></span></button>
       <a class="brand" href="dashboard.html" aria-label="Jarimath Kids">
         <span class="brand-name">jarimath<span> kids</span></span>
       </a>
@@ -23,7 +22,7 @@
         <a class="nav-item" href="mentor.html">Mentor</a>
         <a class="nav-item" href="keuangan.html">Laporan Keuangan</a>
       </nav>
-      <div class="sidebar-bottom"></div>
+      <div class="sidebar-bottom"><button class="button button-quiet sidebar-logout-button" type="button" data-logout>Keluar</button></div>
     </aside>
 
     <div class="main-area">
@@ -38,7 +37,8 @@
             <span id="account-email" class="account-email"></span>
           </div>
           <span class="avatar" aria-hidden="true">A</span>
-          <button id="logout-button" class="button button-quiet" type="button">Keluar</button>
+          <button class="mobile-menu-button" type="button" data-mobile-menu aria-expanded="false" aria-controls="main-navigation" aria-label="Buka menu navigasi"><span></span><span></span><span></span></button>
+          <button id="logout-button" class="button button-quiet" type="button" data-logout>Keluar</button>
         </div>
       </header>
 
@@ -52,9 +52,10 @@
         </section>
         <div id="view-container">
           <section class="content-card">
-            <div class="section-heading table-heading">
+            <div class="section-heading table-heading data-toolbar-heading">
               <div><h2>Data siswa</h2><p class="muted" id="result-count"></p></div>
               <div class="table-toolbar">
+                <button class="mobile-search-toggle" type="button" aria-label="Buka pencarian" aria-expanded="false"><span aria-hidden="true">⌕</span></button>
                 <label class="search-box"><span class="visually-hidden">Cari data</span><input id="table-search" type="search" placeholder="Cari data..." autocomplete="off"></label>
                 <button class="button button-primary" type="button" data-action="add" data-collection="siswa">+ Tambah siswa</button>
               </div>
