@@ -549,22 +549,22 @@ tbody tr:last-child td { border-bottom: 0; }
   .dashboard-shell .topbar .mobile-menu-button span { display: block; width: 19px; height: 2px; border-radius: 2px; background: currentColor; }
   .dashboard-shell .account-area #logout-button { display: none; }
   .dashboard-shell .sidebar {
-    width: min(82vw, 300px);
+    width: 220px;
     position: fixed;
     inset: 0 auto 0 0;
     display: flex;
     flex-direction: column;
     gap: 0;
-    padding: 24px 16px 18px;
-    border-right: 1px solid #e5eaee;
+    padding: 25px 16px 20px;
+    border-right: 1px solid var(--line);
     border-bottom: 0;
     box-shadow: 14px 0 35px rgba(30, 45, 58, .14);
     transform: translateX(-105%);
     transition: transform .2s ease;
   }
   .dashboard-shell .sidebar.is-open { transform: translateX(0); }
-  .dashboard-shell .sidebar .brand { margin: 0 0 26px; }
-  .dashboard-shell .sidebar .nav-label { display: block; margin: 0 8px 10px; }
+  .dashboard-shell .sidebar .brand { margin: 0; }
+  .dashboard-shell .sidebar .nav-label { display: block; margin: 38px 8px 13px; }
   .dashboard-shell .sidebar nav {
     position: static;
     display: grid;
@@ -586,9 +586,9 @@ tbody tr:last-child td { border-bottom: 0; }
   .dashboard-shell .data-toolbar-heading .table-toolbar .button { width: auto; min-height: 40px; white-space: nowrap; }
   .dashboard-shell .data-toolbar-heading .mobile-search-toggle { width: 40px; min-width: 40px; min-height: 40px; display: inline-grid; place-items: center; padding: 0; border: 1px solid #e2e7eb; border-radius: 7px; color: #455766; background: #fff; font-size: 24px; line-height: 1; }
   .dashboard-shell .data-toolbar-heading .search-box { display: none; }
-  .dashboard-shell .data-toolbar-heading .table-toolbar.is-search-open { flex-wrap: wrap; padding-bottom: 48px; }
-  .dashboard-shell .data-toolbar-heading .table-toolbar.is-search-open .search-box { position: absolute; right: 0; bottom: 0; display: block; width: 100%; }
-  .dashboard-shell .data-toolbar-heading .table-toolbar.is-search-open .search-box input { width: 100%; }
+  .dashboard-shell .data-toolbar-heading .table-toolbar.is-search-open .mobile-search-toggle { display: none; }
+  .dashboard-shell .data-toolbar-heading .table-toolbar.is-search-open .search-box { display: block; flex: 1 1 0; width: auto; min-width: 0; }
+  .dashboard-shell .data-toolbar-heading .table-toolbar.is-search-open .search-box input { width: 100%; min-width: 0; }
 
   .dashboard-shell #program-table .table-actions { position: static; }
 }
