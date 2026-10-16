@@ -161,6 +161,8 @@ h1, h2, h3 { font-family: 'Manrope', sans-serif; }
 .dashboard-panels { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 18px; align-items: start; }
 .dashboard-panels .content-card { min-width: 0; margin-top: 18px; }
 .dashboard-panels th, .dashboard-panels td { padding: 12px 14px; white-space: normal; }
+#assignment-table { min-width: 680px; }
+#assignment-table th, #assignment-table td { white-space: nowrap; }
 .assignment-mentor-picker { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .assignment-mentor-picker select { max-width: 145px; height: 34px; padding: 0 7px; border: 1px solid #e2e7eb; border-radius: 6px; background: #fff; }
 .invoice-settings-form { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(240px, 2fr); align-items: center; gap: 10px 16px; padding: 20px 24px; }
@@ -567,6 +569,7 @@ tbody tr:last-child td { border-bottom: 0; }
     border-right: 1px solid var(--line);
     border-bottom: 0;
     box-shadow: 14px 0 35px rgba(30, 45, 58, .14);
+    background: #fff;
     transform: translateX(-105%);
     transition: transform .2s ease;
   }
@@ -599,4 +602,13 @@ tbody tr:last-child td { border-bottom: 0; }
   .dashboard-shell .data-toolbar-heading .table-toolbar.is-search-open .search-box input { width: 100%; min-width: 0; }
 
   .dashboard-shell #program-table .table-actions { position: static; }
+}
+
+/* Keep the mobile navigation surface consistent with its white menu button. */
+@media (max-width: 620px) {
+  .dashboard-shell .sidebar,
+  .dashboard-shell .sidebar nav,
+  .dashboard-shell .sidebar.is-open .mobile-menu-button {
+    background: #fff;
+  }
 }
