@@ -155,7 +155,9 @@ h1, h2, h3 { font-family: 'Manrope', sans-serif; }
 .assignment-field { display: flex; min-width: 150px; flex-direction: column; align-items: flex-start; gap: 7px; }
 .assignment-field .dialog-label { text-align: left; }
 .assignment-controls input,
-.assignment-controls select { min-width: 150px; height: 40px; padding: 0 10px; border: 1px solid #e2e7eb; border-radius: 7px; color: #303943; background: #fff; font: inherit; }
+.assignment-controls select,
+.assignment-controls textarea { min-width: 150px; height: 40px; padding: 0 10px; border: 1px solid #e2e7eb; border-radius: 7px; color: #303943; background: #fff; font: inherit; }
+.assignment-controls textarea { height: auto; min-width: min(100%, 520px); resize: vertical; }
 .assignment-message { margin: 0 22px 12px; }
 .settings-hint { margin: 0 22px 18px; }
 .dashboard-panels { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 18px; align-items: start; }

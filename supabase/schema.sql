@@ -110,6 +110,7 @@ alter table public.pengaturan add column if not exists nama_rekening text not nu
 alter table public.pengaturan add column if not exists nomor_rekening text not null default '';
 alter table public.pengaturan add column if not exists nama_pemilik_rekening text not null default '';
 alter table public.pengaturan add column if not exists qris_image text not null default '';
+alter table public.pengaturan add column if not exists invoice_message_template text not null default '';
 
 insert into public.pengaturan (id, tanggal_bayar)
 values ('global', 5)

@@ -76,6 +76,7 @@
             </div>
             <form id="payment-settings-form" class="assignment-controls">
               <input id="global-payment-day" name="tanggal_bayar" type="number" min="1" max="31" step="1" aria-label="Tanggal pembayaran default (1–31)" required>
+              <textarea id="invoice-message-template" name="invoice_message_template" rows="5" aria-label="Template pesan invoice" placeholder="Gunakan {{nama_siswa}}, {{total}}, dan placeholder lainnya"></textarea>
               <button class="button button-primary" type="submit">Simpan tanggal default</button>
             </form>
             <p class="form-hint settings-hint">Tanggal khusus per mentor dapat diatur melalui tombol Pengaturan pada tabel mentor.</p>

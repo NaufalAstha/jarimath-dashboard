@@ -71,7 +71,7 @@
     pembayaran_mentor: [],
     pengaturan: [{
       id: 'global', tanggal_bayar: 5, nama_rekening: '', nomor_rekening: '',
-      nama_pemilik_rekening: '', qris_image: ''
+      nama_pemilik_rekening: '', qris_image: '', invoice_message_template: ''
     }]
   };
   let storageWarning = false;
@@ -89,7 +89,7 @@
   });
   if (!data.pengaturan.length) data.pengaturan.push({ id: 'global', tanggal_bayar: 5 });
   if (!Number.isInteger(Number(data.pengaturan[0].tanggal_bayar))) data.pengaturan[0].tanggal_bayar = 5;
-  ['nama_rekening', 'nomor_rekening', 'nama_pemilik_rekening', 'qris_image'].forEach(function (key) {
+  ['nama_rekening', 'nomor_rekening', 'nama_pemilik_rekening', 'qris_image', 'invoice_message_template'].forEach(function (key) {
     if (data.pengaturan[0][key] == null) data.pengaturan[0][key] = '';
   });
 
@@ -434,10 +434,13 @@
       + '</p>' + (settings.qris_image ? '<img src="' + escapeHTML(settings.qris_image) + '" alt="QRIS Jarimath Kids">' : '')
       + '</section>';
     const phone = normalizeIndonesianPhone(student.telepon_orang_tua);
-    const message = 'Halo ' + (student.nama_orang_tua || 'Orang Tua') + ', berikut invoice SPP Jarimath Kids.\n'
-      + 'No. Invoice: ' + invoiceNumber + '\nPeriode: ' + period + '\nNama siswa: ' + student.nama
-      + '\nProgram: ' + (student.program || '-') + '\nTotal: ' + formatCurrency(student.spp)
-      + '\nJatuh tempo: ' + dueDate + (paymentDetail ? '\nPembayaran: ' + paymentDetail : '');
+    const template = settings.invoice_message_template || 'Halo {{nama_orang_tua}}, berikut invoice SPP Jarimath Kids.\n\nNo. Invoice: {{nomor_invoice}}\nPeriode: {{periode}}\nNama siswa: {{nama_siswa}}\nProgram: {{program}}\nTotal: {{total}}\nJatuh tempo: {{jatuh_tempo}}\n\nMohon melakukan pembayaran sesuai informasi pada invoice terlampir.';
+    const message = template.replace(/{{\s*([a-z_]+)\s*}}/gi, function (_, key) {
+      const values = { nama_orang_tua: student.nama_orang_tua || 'Orang Tua', nomor_invoice: invoiceNumber,
+        periode: period, nama_siswa: student.nama, program: student.program || '-', total: formatCurrency(student.spp),
+        jatuh_tempo: dueDate, pembayaran: paymentDetail || '-' };
+      return values[key.toLowerCase()] == null ? '' : values[key.toLowerCase()];
+    });
     const whatsappButton = document.getElementById('invoice-whatsapp-button');
     if (whatsappButton) {
       whatsappButton.href = phone ? 'https://wa.me/' + phone.replace(/\D/g, '') + '?text=' + encodeURIComponent(message) : '#';
@@ -495,6 +498,14 @@
     const pdfButton = document.getElementById('invoice-download-pdf-button');
     if (imageButton) imageButton.addEventListener('click', function () { downloadInvoice('image'); });
     if (pdfButton) pdfButton.addEventListener('click', function () { downloadInvoice('pdf'); });
+    const whatsappButton = document.getElementById('invoice-whatsapp-button');
+    if (whatsappButton) whatsappButton.addEventListener('click', function (event) {
+      if (whatsappButton.getAttribute('aria-disabled') === 'true' || !whatsappButton.href || whatsappButton.href === '#') {
+        event.preventDefault();
+        return;
+      }
+      downloadInvoice('image');
+    });
   }
 
   const invoiceCreatorDialog = document.getElementById('invoice-creator-dialog');
@@ -1291,7 +1302,9 @@
         dashboardMessage.textContent = 'Tanggal pembayaran harus berupa angka antara 1 sampai 31.';
         return;
       }
-      const settings = Object.assign({}, data.pengaturan[0], { id: 'global', tanggal_bayar: day });
+      const templateInput = document.getElementById('invoice-message-template');
+      const settings = Object.assign({}, data.pengaturan[0], { id: 'global', tanggal_bayar: day,
+        invoice_message_template: templateInput ? templateInput.value.trim() : data.pengaturan[0].invoice_message_template });
       const button = paymentSettingsForm.querySelector('[type="submit"]');
       button.disabled = true;
       dashboardMessage.textContent = '';
@@ -1318,6 +1331,8 @@
 
   const globalPaymentDayInput = document.getElementById('global-payment-day');
   if (globalPaymentDayInput) globalPaymentDayInput.value = data.pengaturan[0].tanggal_bayar;
+  const invoiceTemplateInput = document.getElementById('invoice-message-template');
+  if (invoiceTemplateInput) invoiceTemplateInput.value = data.pengaturan[0].invoice_message_template || '';
 
   document.querySelectorAll('[data-close-dialog]').forEach(function (button) {
     button.addEventListener('click', function () { dataDialog.close(); });
