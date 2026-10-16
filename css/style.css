@@ -347,6 +347,9 @@ tbody tr:last-child td { border-bottom: 0; }
   .qris-preview { grid-column: 1; }
   .invoice-meta { grid-template-columns: 1fr; }
   .invoice-actions { align-items: stretch; flex-direction: column; }
+  .invoice-dialog { display: flex; flex-direction: column; }
+  .invoice-dialog .invoice-document { order: 1; }
+  .invoice-dialog .invoice-actions { order: 2; width: 100%; margin-top: 16px; margin-bottom: 0; }
   th, td { padding: 12px 14px; }
 }
 
